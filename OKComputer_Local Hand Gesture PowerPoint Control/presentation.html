@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Control - AI Gesture Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-icon">🤖</span>
+                <span class="logo-text">AI Gesture Control</span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Demo</a>
+                <a href="training.html" class="nav-link">Training</a>
+                <a href="presentation.html" class="nav-link">Presentation</a>
+                <a href="about.html" class="nav-link">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Presentation Header -->
+    <section class="presentation-header">
+        <div class="container">
+            <h1 class="section-title">Gesture-Controlled Presentation</h1>
+            <p class="section-description">
+                Experience seamless presentation control using natural hand gestures
+            </p>
+        </div>
+    </section>
+
+    <!-- Presentation Interface -->
+    <section class="presentation-interface">
+        <div class="container">
+            <div class="presentation-layout">
+                <!-- Main Presentation Area -->
+                <div class="presentation-main">
+                    <div class="presentation-controls-top">
+                        <div class="presentation-info">
+                            <span class="slide-counter">Slide <span id="current-slide">1</span> of <span id="total-slides">8</span></span>
+                            <span class="presentation-timer" id="timer">00:00</span>
+                        </div>
+                        <div class="control-buttons">
+                            <button id="gesture-toggle" class="btn btn-accent">🎯 Gesture Mode</button>
+                            <button id="fullscreen-btn" class="btn btn-secondary">⛶ Fullscreen</button>
+                            <button id="settings-btn" class="btn btn-secondary">⚙️ Settings</button>
+                        </div>
+                    </div>
+
+                    <div class="slide-container" id="main-slide">
+                        <div class="slide-content">
+                            <h2 class="slide-title">Welcome to AI Gesture Control</h2>
+                            <div class="slide-body">
+                                <p>Revolutionary presentation control using advanced computer vision and machine learning.</p>
+                                <div class="slide-features">
+                                    <div class="feature-item">
+                                        <span class="feature-icon">🎯</span>
+                                        <span>Real-time gesture recognition</span>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-icon">⚡</span>
+                                        <span>Zero-latency response</span>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-icon">🔧</span>
+                                        <span>Customizable gestures</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slide-notes">
+                                <p>💡 Use open palm gesture to start presentation</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="presentation-controls-bottom">
+                        <div class="gesture-status">
+                            <div class="status-indicator" id="gesture-status"></div>
+                            <span class="status-text" id="status-text">Ready for gestures</span>
+                        </div>
+                        <div class="manual-controls">
+                            <button id="prev-slide" class="btn btn-control">⬅️ Previous</button>
+                            <button id="play-pause" class="btn btn-control">▶️ Play</button>
+                            <button id="next-slide" class="btn btn-control">Next ➡️</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gesture Control Panel -->
+                <div class="gesture-panel">
+                    <div class="panel-header">
+                        <h3>Gesture Controls</h3>
+                        <div class="panel-toggle">
+                            <button id="panel-collapse" class="btn btn-small">−</button>
+                        </div>
+                    </div>
+
+                    <div class="gesture-recognition">
+                        <div class="camera-preview">
+                            <video id="gesture-camera" autoplay muted></video>
+                            <canvas id="gesture-canvas"></canvas>
+                            <div class="camera-status">
+                                <div id="camera-indicator" class="status-indicator offline"></div>
+                                <span id="camera-status">Camera Offline</span>
+                            </div>
+                        </div>
+
+                        <div class="gesture-feedback">
+                            <div class="current-gesture-display">
+                                <div class="gesture-icon-large" id="current-gesture-icon">🤚</div>
+                                <div class="gesture-name" id="current-gesture-name">Waiting for gesture...</div>
+                                <div class="gesture-confidence">
+                                    <span class="confidence-label">Confidence:</span>
+                                    <span class="confidence-value" id="confidence-value">--</span>
+                                </div>
+                            </div>
+
+                            <div class="gesture-actions">
+                                <div class="action-item">
+                                    <span class="action-icon">▶️</span>
+                                    <span class="action-text">Open Palm - Play/Pause</span>
+                                </div>
+                                <div class="action-item">
+                                    <span class="action-icon">➡️</span>
+                                    <span class="action-text">Point Right - Next Slide</span>
+                                </div>
+                                <div class="action-item">
+                                    <span class="action-icon">⬅️</span>
+                                    <span class="action-text">Point Left - Previous Slide</span>
+                                </div>
+                                <div class="action-item">
+                                    <span class="action-icon">🔍</span>
+                                    <span class="action-text">Thumbs Up - Zoom In</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="performance-metrics">
+                        <h4>Performance</h4>
+                        <div class="metric-item">
+                            <span class="metric-label">Detection Rate:</span>
+                            <span class="metric-value" id="detection-rate">94.2%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Response Time:</span>
+                            <span class="metric-value" id="response-time">87ms</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Active Gestures:</span>
+                            <span class="metric-value" id="active-gestures">6</span>
+                        </div>
+                    </div>
+
+                    <div class="gesture-history">
+                        <h4>Recent Gestures</h4>
+                        <div class="history-list" id="gesture-history">
+                            <div class="history-item">
+                                <span class="history-icon">✋</span>
+                                <span class="history-text">Open Palm</span>
+                                <span class="history-time">2s ago</span>
+                            </div>
+                            <div class="history-item">
+                                <span class="history-icon">👉</span>
+                                <span class="history-text">Point Right</span>
+                                <span class="history-time">5s ago</span>
+                            </div>
+                            <div class="history-item">
+                                <span class="history-icon">👍</span>
+                                <span class="history-text">Thumbs Up</span>
+                                <span class="history-time">12s ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide Thumbnails -->
+    <section class="slide-thumbnails">
+        <div class="container">
+            <h3>Slide Navigator</h3>
+            <div class="thumbnails-grid">
+                <div class="thumbnail active" data-slide="0">
+                    <div class="thumbnail-image">1</div>
+                    <div class="thumbnail-title">Welcome</div>
+                </div>
+                <div class="thumbnail" data-slide="1">
+                    <div class="thumbnail-image">2</div>
+                    <div class="thumbnail-title">Technology</div>
+                </div>
+                <div class="thumbnail" data-slide="2">
+                    <div class="thumbnail-image">3</div>
+                    <div class="thumbnail-title">Features</div>
+                </div>
+                <div class="thumbnail" data-slide="3">
+                    <div class="thumbnail-image">4</div>
+                    <div class="thumbnail-title">Gesture Guide</div>
+                </div>
+                <div class="thumbnail" data-slide="4">
+                    <div class="thumbnail-image">5</div>
+                    <div class="thumbnail-title">Applications</div>
+                </div>
+                <div class="thumbnail" data-slide="5">
+                    <div class="thumbnail-image">6</div>
+                    <div class="thumbnail-title">Demo</div>
+                </div>
+                <div class="thumbnail" data-slide="6">
+                    <div class="thumbnail-image">7</div>
+                    <div class="thumbnail-title">Future</div>
+                </div>
+                <div class="thumbnail" data-slide="7">
+                    <div class="thumbnail-image">8</div>
+                    <div class="thumbnail-title">Q&A</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>AI Gesture Control</h3>
+                    <p>Professional presentation control using advanced gesture recognition technology.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Controls</h3>
+                    <ul>
+                        <li>Open Palm - Play/Pause</li>
+                        <li>Point Right - Next Slide</li>
+                        <li>Point Left - Previous Slide</li>
+                        <li>Thumbs Up - Zoom In</li>
+                        <li>Peace Sign - Pointer Mode</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Features</h3>
+                    <ul>
+                        <li>Real-time Recognition</li>
+                        <li>Zero Latency</li>
+                        <li>Custom Gestures</li>
+                        <li>Performance Analytics</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AI Gesture Control System. Professional presentation technology.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Presentation control functionality
+        class PresentationController {
+            constructor() {
+                this.slides = [
+                    {
+                        title: "Welcome to AI Gesture Control",
+                        content: "Revolutionary presentation control using advanced computer vision and machine learning.",
+                        features: [
+                            { icon: "🎯", text: "Real-time gesture recognition" },
+                            { icon: "⚡", text: "Zero-latency response" },
+                            { icon: "🔧", text: "Customizable gestures" }
+                        ]
+                    },
+                    {
+                        title: "Advanced Technology",
+                        content: "Built with cutting-edge AI and computer vision technologies for seamless interaction.",
+                        features: [
+                            { icon: "🧠", text: "Machine learning models" },
+                            { icon: "👁️", text: "Computer vision algorithms" },
+                            { icon: "⚡", text: "Real-time processing" }
+                        ]
+                    },
+                    {
+                        title: "Key Features",
+                        content: "Comprehensive gesture recognition system with professional-grade accuracy and performance.",
+                        features: [
+                            { icon: "🎯", text: "95%+ accuracy rate" },
+                            { icon: "📊", text: "Performance analytics" },
+                            { icon: "🔒", text: "Privacy-first design" }
+                        ]
+                    },
+                    {
+                        title: "Gesture Guide",
+                        content: "Learn the gestures that control your presentation with natural hand movements.",
+                        features: [
+                            { icon: "✋", text: "Open Palm - Play/Pause" },
+                            { icon: "👉", text: "Point Right - Next Slide" },
+                            { icon: "👈", text: "Point Left - Previous Slide" }
+                        ]
+                    },
+                    {
+                        title: "Applications",
+                        content: "Perfect for presenters, educators, and professionals who want engaging presentations.",
+                        features: [
+                            { icon: "🏢", text: "Business presentations" },
+                            { icon: "🎓", text: "Educational lectures" },
+                            { icon: "🎤", text: "Conference talks" }
+                        ]
+                    },
+                    {
+                        title: "Live Demo",
+                        content: "Experience the future of presentation control with our interactive demonstration.",
+                        features: [
+                            { icon: "📹", text: "Real-time camera feed" },
+                            { icon: "🎮", text: "Interactive controls" },
+                            { icon: "📊", text: "Performance metrics" }
+                        ]
+                    },
+                    {
+                        title: "Future Vision",
+                        content: "The future of human-computer interaction is natural, intuitive, and gesture-based.",
+                        features: [
+                            { icon: "🌐", text: "Universal compatibility" },
+                            { icon: "🚀", text: "Advanced AI integration" },
+                            { icon: "🎨", text: "Custom gesture creation" }
+                        ]
+                    },
+                    {
+                        title: "Questions & Discussion",
+                        content: "Thank you for your attention. Ready for questions and discussion about gesture control technology.",
+                        features: [
+                            { icon: "❓", text: "Technical questions" },
+                            { icon: "💡", text: "Implementation ideas" },
+                            { icon: "🤝", text: "Collaboration opportunities" }
+                        ]
+                    }
+                ];
+                this.currentSlide = 0;
+                this.isPlaying = false;
+                this.isGestureMode = false;
+                this.timer = 0;
+                this.timerInterval = null;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.startTimer();
+                this.simulateGestureRecognition();
+            }
+
+            initializeElements() {
+                this.slideContainer = document.getElementById('main-slide');
+                this.currentSlideElement = document.getElementById('current-slide');
+                this.totalSlidesElement = document.getElementById('total-slides');
+                this.timerElement = document.getElementById('timer');
+                this.gestureStatusElement = document.getElementById('gesture-status');
+                this.statusTextElement = document.getElementById('status-text');
+                this.currentGestureIcon = document.getElementById('current-gesture-icon');
+                this.currentGestureName = document.getElementById('current-gesture-name');
+                this.confidenceValue = document.getElementById('confidence-value');
+                
+                this.totalSlidesElement.textContent = this.slides.length;
+            }
+
+            setupEventListeners() {
+                // Manual controls
+                document.getElementById('prev-slide').addEventListener('click', () => this.previousSlide());
+                document.getElementById('next-slide').addEventListener('click', () => this.nextSlide());
+                document.getElementById('play-pause').addEventListener('click', () => this.togglePlayPause());
+                
+                // Gesture toggle
+                document.getElementById('gesture-toggle').addEventListener('click', () => this.toggleGestureMode());
+                
+                // Thumbnail navigation
+                const thumbnails = document.querySelectorAll('.thumbnail');
+                thumbnails.forEach((thumb, index) => {
+                    thumb.addEventListener('click', () => this.goToSlide(index));
+                });
+                
+                // Fullscreen
+                document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
+            }
+
+            renderSlide() {
+                const slide = this.slides[this.currentSlide];
+                this.currentSlideElement.textContent = this.currentSlide + 1;
+                
+                // Update slide content
+                this.slideContainer.innerHTML = `
+                    <div class="slide-content">
+                        <h2 class="slide-title">${slide.title}</h2>
+                        <div class="slide-body">
+                            <p>${slide.content}</p>
+                            <div class="slide-features">
+                                ${slide.features.map(feature => `
+                                    <div class="feature-item">
+                                        <span class="feature-icon">${feature.icon}</span>
+                                        <span>${feature.text}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="slide-notes">
+                            <p>💡 Use gestures or controls to navigate through the presentation</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Update thumbnails
+                document.querySelectorAll('.thumbnail').forEach((thumb, index) => {
+                    thumb.classList.toggle('active', index === this.currentSlide);
+                });
+                
+                // Animate slide transition
+                this.animateSlideTransition();
+            }
+
+            animateSlideTransition() {
+                this.slideContainer.style.opacity = '0';
+                this.slideContainer.style.transform = 'translateX(20px)';
+                
+                setTimeout(() => {
+                    this.slideContainer.style.opacity = '1';
+                    this.slideContainer.style.transform = 'translateX(0)';
+                }, 50);
+            }
+
+            nextSlide() {
+                if (this.currentSlide < this.slides.length - 1) {
+                    this.currentSlide++;
+                    this.renderSlide();
+                    this.showGestureFeedback('Next Slide', '👉');
+                }
+            }
+
+            previousSlide() {
+                if (this.currentSlide > 0) {
+                    this.currentSlide--;
+                    this.renderSlide();
+                    this.showGestureFeedback('Previous Slide', '👈');
+                }
+            }
+
+            goToSlide(index) {
+                if (index >= 0 && index < this.slides.length) {
+                    this.currentSlide = index;
+                    this.renderSlide();
+                }
+            }
+
+            togglePlayPause() {
+                this.isPlaying = !this.isPlaying;
+                const playButton = document.getElementById('play-pause');
+                playButton.textContent = this.isPlaying ? '⏸️' : '▶️';
+                
+                if (this.isPlaying) {
+                    this.showGestureFeedback('Presentation Started', '✋');
+                    this.startAutoAdvance();
+                } else {
+                    this.showGestureFeedback('Presentation Paused', '⏸️');
+                    this.stopAutoAdvance();
+                }
+            }
+
+            startAutoAdvance() {
+                if (this.isPlaying) {
+                    this.autoAdvanceInterval = setInterval(() => {
+                        if (this.currentSlide < this.slides.length - 1) {
+                            this.nextSlide();
+                        } else {
+                            this.togglePlayPause();
+                        }
+                    }, 5000);
+                }
+            }
+
+            stopAutoAdvance() {
+                if (this.autoAdvanceInterval) {
+                    clearInterval(this.autoAdvanceInterval);
+                }
+            }
+
+            toggleGestureMode() {
+                this.isGestureMode = !this.isGestureMode;
+                const gestureToggle = document.getElementById('gesture-toggle');
+                
+                if (this.isGestureMode) {
+                    gestureToggle.textContent = '🎯 Gesture Mode On';
+                    gestureToggle.classList.add('active');
+                    this.gestureStatusElement.classList.add('active');
+                    this.statusTextElement.textContent = 'Gesture control active';
+                    this.startCameraSimulation();
+                } else {
+                    gestureToggle.textContent = '🎯 Gesture Mode Off';
+                    gestureToggle.classList.remove('active');
+                    this.gestureStatusElement.classList.remove('active');
+                    this.statusTextElement.textContent = 'Gesture control disabled';
+                    this.stopCameraSimulation();
+                }
+            }
+
+            startCameraSimulation() {
+                // Simulate camera feed
+                this.cameraActive = true;
+                const cameraIndicator = document.getElementById('camera-indicator');
+                const cameraStatus = document.getElementById('camera-status');
+                
+                cameraIndicator.classList.remove('offline');
+                cameraIndicator.classList.add('active');
+                cameraStatus.textContent = 'Camera Active';
+            }
+
+            stopCameraSimulation() {
+                this.cameraActive = false;
+                const cameraIndicator = document.getElementById('camera-indicator');
+                const cameraStatus = document.getElementById('camera-status');
+                
+                cameraIndicator.classList.remove('active');
+                cameraIndicator.classList.add('offline');
+                cameraStatus.textContent = 'Camera Offline';
+            }
+
+            simulateGestureRecognition() {
+                if (this.isGestureMode && this.cameraActive) {
+                    const gestures = [
+                        { icon: '✋', name: 'Open Palm', confidence: Math.floor(Math.random() * 15) + 85 },
+                        { icon: '👉', name: 'Point Right', confidence: Math.floor(Math.random() * 15) + 80 },
+                        { icon: '👈', name: 'Point Left', confidence: Math.floor(Math.random() * 15) + 80 },
+                        { icon: '👍', name: 'Thumbs Up', confidence: Math.floor(Math.random() * 15) + 85 },
+                        { icon: '✌️', name: 'Peace Sign', confidence: Math.floor(Math.random() * 15) + 75 }
+                    ];
+                    
+                    if (Math.random() > 0.7) { // 30% chance of gesture detection
+                        const gesture = gestures[Math.floor(Math.random() * gestures.length)];
+                        this.currentGestureIcon.textContent = gesture.icon;
+                        this.currentGestureName.textContent = gesture.name;
+                        this.confidenceValue.textContent = gesture.confidence + '%';
+                        
+                        // Execute corresponding action
+                        setTimeout(() => this.executeGestureAction(gesture.name), 500);
+                    }
+                }
+                
+                setTimeout(() => this.simulateGestureRecognition(), 2000);
+            }
+
+            executeGestureAction(gestureName) {
+                switch (gestureName) {
+                    case 'Open Palm':
+                        this.togglePlayPause();
+                        break;
+                    case 'Point Right':
+                        this.nextSlide();
+                        break;
+                    case 'Point Left':
+                        this.previousSlide();
+                        break;
+                    case 'Thumbs Up':
+                        this.showGestureFeedback('Zoom In', '🔍');
+                        break;
+                    case 'Peace Sign':
+                        this.showGestureFeedback('Pointer Mode', '🎯');
+                        break;
+                }
+            }
+
+            showGestureFeedback(action, icon) {
+                this.statusTextElement.textContent = action;
+                this.gestureStatusElement.style.background = '#06b6d4';
+                
+                setTimeout(() => {
+                    this.statusTextElement.textContent = this.isGestureMode ? 'Gesture control active' : 'Ready for gestures';
+                    this.gestureStatusElement.style.background = this.isGestureMode ? '#10b981' : '#64748b';
+                }, 2000);
+                
+                // Add to history
+                this.addToGestureHistory(icon, action);
+            }
+
+            addToGestureHistory(icon, action) {
+                const historyList = document.getElementById('gesture-history');
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <span class="history-icon">${icon}</span>
+                    <span class="history-text">${action}</span>
+                    <span class="history-time">now</span>
+                `;
+                
+                historyList.insertBefore(historyItem, historyList.firstChild);
+                
+                // Keep only last 5 items
+                while (historyList.children.length > 5) {
+                    historyList.removeChild(historyList.lastChild);
+                }
+                
+                // Update time stamps
+                const items = historyList.querySelectorAll('.history-item');
+                items.forEach((item, index) => {
+                    const timeElement = item.querySelector('.history-time');
+                    if (index === 0) {
+                        timeElement.textContent = 'now';
+                    } else {
+                        timeElement.textContent = `${index * 3}s ago`;
+                    }
+                });
+            }
+
+            startTimer() {
+                this.timerInterval = setInterval(() => {
+                    this.timer++;
+                    const minutes = Math.floor(this.timer / 60);
+                    const seconds = this.timer % 60;
+                    this.timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Initialize presentation controller
+        document.addEventListener('DOMContentLoaded', () => {
+            new PresentationController();
+        });
+    </script>
+</body>
+</html>
