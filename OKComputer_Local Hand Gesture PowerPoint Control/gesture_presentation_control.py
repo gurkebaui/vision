@@ -21,7 +21,7 @@ class GesturePresentationController:
         self.mp_hands = mp.solutions.hands
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
-            max_num_hands=2,
+            max_num_hands=1,
             min_detection_confidence=0.7,
             min_tracking_confidence=0.5
         )
@@ -34,7 +34,7 @@ class GesturePresentationController:
         self.gesture_cooldown = 1.0  # 1 second cooldown between gestures
         
         # Timing variables for your 3-second requirement
-        self.finger_lift_time = 0
+        self.finger_lift_time = 1
         self.finger_lift_detected = False
         self.gesture_window = 3.0  # 3 seconds to perform gesture after finger lift
         
@@ -77,7 +77,7 @@ class GesturePresentationController:
         # Set camera properties
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.display_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.display_height)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        self.cap.set(cv2.CAP_PROP_FPS, 60)
         
         print("✅ Camera initialized successfully!")
         return True
@@ -88,13 +88,13 @@ class GesturePresentationController:
         extended_fingers = []
         
         # Thumb (special case)
-        thumb_tip = landmarks[4]
+        """thumb_tip = landmarks[4]
         thumb_ip = landmarks[3]
         thumb_mcp = landmarks[2]
-        
+
         if thumb_tip.x > thumb_ip.x and thumb_ip.x > thumb_mcp.x:
             extended_count += 1
-            extended_fingers.append('thumb')
+            extended_fingers.append('thumb')"""
         
         # Other fingers
         finger_tips = [8, 12, 16, 20]  # Index, Middle, Ring, Pinky tips
@@ -139,7 +139,7 @@ class GesturePresentationController:
         # Closed Fist (no fingers extended)
         elif extended_count == 0:
             gesture = "closed_fist"
-            confidence = 0.95
+            confidence = 0.25
         
         # Pointing Up (only index finger extended)
         elif extended_count == 1 and 'index' in extended_fingers:
@@ -150,11 +150,15 @@ class GesturePresentationController:
         elif extended_count == 1 and 'thumb' in extended_fingers:
             gesture = "thumbs_up"
             confidence = 0.8
+
+        elif extended_count == 1 and 'pinky' in extended_fingers:
+            gesture = "pinky_up"
+            confidence = 0.85
         
         # Peace Sign (index and middle fingers extended)
-        elif extended_count == 2 and 'index' in extended_fingers and 'middle' in extended_fingers:
+        elif extended_count == 1 and  'middle' in extended_fingers:
             gesture = "peace_sign"
-            confidence = 0.9
+            confidence = 0.85
         
         # Swipe detection based on movement
         if self.previous_landmarks is not None:
@@ -215,12 +219,12 @@ class GesturePresentationController:
             command_executed = True
         
         elif gesture == "thumbs_up":
-            pyautogui.hotkey('ctrl', '+')
+            #pyautogui.hotkey('ctrl', '+')
             command_name = "Zoom In"
             command_executed = True
         
         elif gesture == "peace_sign":
-            pyautogui.hotkey('ctrl', 'p')
+            pyautogui.hotkey('f')
             command_name = "Toggle Pointer"
             command_executed = True
         
@@ -231,12 +235,13 @@ class GesturePresentationController:
         
         return command_executed
     
-    def check_finger_lift_trigger(self, extended_count):
+    def check_finger_lift_trigger(self, extended_count, gesture ):
         """Check for finger lift to start 3-second gesture window"""
         current_time = time.time()
+
         
         # Detect finger lift (from closed fist to any gesture)
-        if not self.finger_lift_detected and extended_count > 0:
+        if not self.finger_lift_detected and extended_count > 0 and gesture == "pinky_up" :
             # Check if we had a closed fist recently
             recent_gestures = [g for g in self.gesture_buffer if g['extended_count'] == 0]
             if recent_gestures:
@@ -385,7 +390,7 @@ class GesturePresentationController:
                     })
                     
                     # Check for finger lift trigger
-                    finger_lift_active = self.check_finger_lift_trigger(extended_count)
+                    finger_lift_active = self.check_finger_lift_trigger(extended_count, gesture)
                     
                     # Execute command if gesture detected and window is active
                     if gesture and finger_lift_active and confidence > 0.7:
