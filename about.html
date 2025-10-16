@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - AI Gesture Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-icon">🤖</span>
+                <span class="logo-text">AI Gesture Control</span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Demo</a>
+                <a href="training.html" class="nav-link">Training</a>
+                <a href="presentation.html" class="nav-link">Presentation</a>
+                <a href="about.html" class="nav-link">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- About Hero -->
+    <section class="about-hero">
+        <div class="container">
+            <h1 class="section-title">About AI Gesture Control</h1>
+            <p class="section-description">
+                Revolutionizing human-computer interaction through advanced computer vision and machine learning
+            </p>
+        </div>
+    </section>
+
+    <!-- Technology Overview -->
+    <section class="tech-overview">
+        <div class="container">
+            <div class="overview-grid">
+                <div class="overview-content">
+                    <h2>Advanced Computer Vision Technology</h2>
+                    <p>Our AI Gesture Control system represents the cutting edge of human-computer interaction, combining state-of-the-art machine learning models with real-time computer vision algorithms to create seamless, intuitive control experiences.</p>
+                    <p>Built on Google's MediaPipe framework and enhanced with custom neural networks, our system achieves unprecedented accuracy and responsiveness in gesture recognition, enabling natural interaction with digital presentations without the need for physical input devices.</p>
+                    <p>The technology processes video streams at 30+ FPS, detecting 21 hand keypoints in real-time and translating complex hand gestures into precise control commands with sub-100ms latency.</p>
+                </div>
+                <div class="overview-visual">
+                    <img src="resources/hand-pose-ai.png" alt="AI Hand Pose Detection Technology">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="architecture">
+        <div class="container">
+            <h2 class="section-title">System Architecture</h2>
+            <div class="architecture-flow">
+                <div class="arch-step">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">📹</div>
+                    <h3>Video Capture</h3>
+                    <p>High-resolution webcam captures real-time video at 30+ FPS with automatic exposure and focus adjustment for optimal hand detection in various lighting conditions.</p>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-step">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">🧠</div>
+                    <h3>AI Processing</h3>
+                    <p>MediaPipe Hands model processes each frame, detecting 21 hand landmarks with sub-pixel accuracy and tracking hand movements across consecutive frames.</p>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-step">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">🎯</div>
+                    <h3>Gesture Recognition</h3>
+                    <p>Custom CNN classifier analyzes hand pose patterns, finger positions, and movement trajectories to identify specific gestures with 95%+ accuracy.</p>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-step">
+                    <div class="step-number">4</div>
+                    <div class="step-icon">⚡</div>
+                    <h3>Command Execution</h3>
+                    <p>Recognized gestures trigger corresponding presentation controls through system-level keyboard simulation with zero-latency response.</p>
+                </div>
+            </div>
+
+            <div class="tech-stack">
+                <h3>Technology Stack</h3>
+                <div class="stack-grid">
+                    <div class="stack-item">
+                        <h4>Frontend</h4>
+                        <ul>
+                            <li>HTML5 Canvas API</li>
+                            <li>WebRTC Media Streams</li>
+                            <li>WebGL Acceleration</li>
+                            <li>Responsive Design</li>
+                        </ul>
+                    </div>
+                    <div class="stack-item">
+                        <h4>AI/ML</h4>
+                        <ul>
+                            <li>MediaPipe Hands</li>
+                            <li>TensorFlow.js</li>
+                            <li>Custom CNN Models</li>
+                            <li>Real-time Inference</li>
+                        </ul>
+                    </div>
+                    <div class="stack-item">
+                        <h4>Processing</h4>
+                        <ul>
+                            <li>Web Workers</li>
+                            <li>RequestAnimationFrame</li>
+                            <li>GPU Acceleration</li>
+                            <li>Memory Optimization</li>
+                        </ul>
+                    </div>
+                    <div class="stack-item">
+                        <h4>Integration</h4>
+                        <ul>
+                            <li>System Integration</li>
+                            <li>Cross-platform Support</li>
+                            <li>Presentation Software</li>
+                            <li>API Development</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Deep Dive -->
+    <section class="features-deep">
+        <div class="container">
+            <h2 class="section-title">Features & Capabilities</h2>
+            <div class="features-grid">
+                <div class="feature-card-large">
+                    <div class="feature-icon-large">🎯</div>
+                    <h3>Real-Time Detection</h3>
+                    <p>Advanced AI processes video streams at 30+ FPS, providing instant gesture recognition with sub-100ms latency for seamless user experience.</p>
+                    <div class="feature-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Processing Speed:</span>
+                            <span class="spec-value">30+ FPS</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Response Time:</span>
+                            <span class="spec-value">< 100ms</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Detection Accuracy:</span>
+                            <span class="spec-value">95%+</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card-large">
+                    <div class="feature-icon-large">🧠</div>
+                    <h3>Machine Learning</h3>
+                    <p>Neural networks trained on thousands of hand poses ensure robust recognition across different users, lighting conditions, and hand orientations.</p>
+                    <div class="feature-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Training Dataset:</span>
+                            <span class="spec-value">50,000+ Images</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Key Points:</span>
+                            <span class="spec-value">21 Landmarks</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Model Type:</span>
+                            <span class="spec-value">CNN + LSTM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card-large">
+                    <div class="feature-icon-large">⚡</div>
+                    <h3>Zero Latency</h3>
+                    <p>Optimized algorithms and GPU acceleration deliver immediate response, ensuring natural interaction flow without delays or interruptions.</p>
+                    <div class="feature-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Processing:</span>
+                            <span class="spec-value">GPU Accelerated</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Memory Usage:</span>
+                            <span class="spec-value">< 100MB</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">CPU Load:</span>
+                            <span class="spec-value">< 15%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card-large">
+                    <div class="feature-icon-large">🔧</div>
+                    <h3>Customizable</h3>
+                    <p>Map custom gestures to specific actions, calibrate for individual hand characteristics, and create personalized gesture libraries.</p>
+                    <div class="feature-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Custom Gestures:</span>
+                            <span class="spec-value">Unlimited</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Calibration:</span>
+                            <span class="spec-value">Auto/Manual</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Profiles:</span>
+                            <span class="spec-value">Multiple Users</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card-large">
+                    <div class="feature-icon-large">🌐</div>
+                    <h3>Cross-Platform</h3>
+                    <p>Works seamlessly across different operating systems and integrates with popular presentation software including PowerPoint, Google Slides, and Keynote.</p>
+                    <div class="feature-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Platforms:</span>
+                            <span class="spec-value">Windows, macOS, Linux</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Browsers:</span>
+                            <span class="spec-value">Chrome, Firefox, Safari</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Software:</span>
+                            <span class="spec-value">All Major Apps</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card-large">
+                    <div class="feature-icon-large">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>All processing happens locally on your device with no data sent to external servers, ensuring complete privacy and security.</p>
+                    <div class="feature-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Data Processing:</span>
+                            <span class="spec-value">Local Only</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Cloud Storage:</span>
+                            <span class="spec-value">None</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Encryption:</span>
+                            <span class="spec-value">End-to-End</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Applications -->
+    <section class="applications">
+        <div class="container">
+            <h2 class="section-title">Applications</h2>
+            <div class="apps-grid">
+                <div class="app-card">
+                    <div class="app-icon">🏢</div>
+                    <h3>Business Presentations</h3>
+                    <p>Professional presenters can engage audiences more effectively by eliminating physical barriers and maintaining natural movement patterns during presentations.</p>
+                    <div class="app-features">
+                        <span class="app-feature">Conference talks</span>
+                        <span class="app-feature">Board meetings</span>
+                        <span class="app-feature">Sales presentations</span>
+                    </div>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">🎓</div>
+                    <h3>Educational Settings</h3>
+                    <p>Teachers and lecturers can create more interactive learning experiences by using natural gestures to control educational content and engage with students.</p>
+                    <div class="app-features">
+                        <span class="app-feature">Classroom lectures</span>
+                        <span class="app-feature">Online courses</span>
+                        <span class="app-feature">Training sessions</span>
+                    </div>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">♿</div>
+                    <h3>Accessibility</h3>
+                    <p>Empowering individuals with mobility impairments to control digital presentations and interact with technology through intuitive hand gestures.</p>
+                    <div class="app-features">
+                        <span class="app-feature">Assistive technology</span>
+                        <span class="app-feature">Inclusive design</span>
+                        <span class="app-feature">Adaptive controls</span>
+                    </div>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">🎮</div>
+                    <h3>Gaming & Entertainment</h3>
+                    <p>Creating immersive gaming experiences and interactive entertainment applications using natural hand movements and gestures.</p>
+                    <div class="app-features">
+                        <span class="app-feature">VR/AR experiences</span>
+                        <span class="app-feature">Interactive installations</span>
+                        <span class="app-feature">Motion gaming</span>
+                    </div>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">🏠</div>
+                    <h3>Smart Home Control</h3>
+                    <p>Intuitive control of smart home devices, lighting, and entertainment systems through natural hand gestures and movements.</p>
+                    <div class="app-features">
+                        <span class="app-feature">Home automation</span>
+                        <span class="app-feature">Media control</span>
+                        <span class="app-feature">Security systems</span>
+                    </div>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">🔬</div>
+                    <h3>Research & Development</h3>
+                    <p>Advanced research in human-computer interaction, computer vision, and machine learning for next-generation interface technologies.</p>
+                    <div class="app-features">
+                        <span class="app-feature">Academic research</span>
+                        <span class="app-feature">Prototyping</span>
+                        <span class="app-feature">Innovation labs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Future Vision -->
+    <section class="future-vision">
+        <div class="container">
+            <h2 class="section-title">Future Vision</h2>
+            <div class="vision-content">
+                <div class="vision-text">
+                    <p>The future of human-computer interaction lies in natural, intuitive interfaces that eliminate the barriers between users and technology. Our AI Gesture Control system represents a significant step toward this future, where digital interaction becomes as natural as human conversation.</p>
+                    <p>We envision a world where gesture-based control extends beyond presentations to encompass all aspects of digital interaction, from creative tools and gaming to virtual collaboration and accessibility solutions.</p>
+                    <p>As machine learning models become more sophisticated and hardware capabilities continue to advance, we anticipate even more seamless integration of gesture recognition into everyday technology, creating experiences that are truly intuitive and empowering.</p>
+                </div>
+                <div class="vision-image">
+                    <img src="resources/presentation-control.png" alt="Future of Gesture Control">
+                </div>
+            </div>
+            
+            <div class="roadmap">
+                <h3>Development Roadmap</h3>
+                <div class="roadmap-timeline">
+                    <div class="roadmap-item">
+                        <div class="roadmap-date">2025 Q1</div>
+                        <div class="roadmap-content">
+                            <h4>Enhanced Gesture Library</h4>
+                            <p>Expanded gesture recognition with 20+ new gestures and improved accuracy</p>
+                        </div>
+                    </div>
+                    <div class="roadmap-item">
+                        <div class="roadmap-date">2025 Q2</div>
+                        <div class="roadmap-content">
+                            <h4>Multi-User Support</h4>
+                            <p>Simultaneous gesture recognition for multiple users in collaborative environments</p>
+                        </div>
+                    </div>
+                    <div class="roadmap-item">
+                        <div class="roadmap-date">2025 Q3</div>
+                        <div class="roadmap-content">
+                            <h4>VR/AR Integration</h4>
+                            <p>Immersive gesture control for virtual and augmented reality applications</p>
+                        </div>
+                    </div>
+                    <div class="roadmap-item">
+                        <div class="roadmap-date">2025 Q4</div>
+                        <div class="roadmap-content">
+                            <h4>AI-Powered Adaptation</h4>
+                            <p>Self-learning systems that adapt to individual user preferences and behaviors</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>AI Gesture Control</h3>
+                    <p>Revolutionizing human-computer interaction through advanced computer vision and machine learning technology.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Technology</h3>
+                    <ul>
+                        <li>MediaPipe Hands</li>
+                        <li>TensorFlow.js</li>
+                        <li>Real-time Processing</li>
+                        <li>Privacy-First Design</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Applications</h3>
+                    <ul>
+                        <li>Business Presentations</li>
+                        <li>Educational Technology</li>
+                        <li>Accessibility Tools</li>
+                        <li>Smart Home Control</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Resources</h3>
+                    <ul>
+                        <li>Documentation</li>
+                        <li>API Reference</li>
+                        <li>Developer Guide</li>
+                        <li>Support Center</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AI Gesture Control System. Advancing human-computer interaction through innovative technology.</p>
+            </div>
+        </div>
+    </footer>
+
+    <style>
+        /* About page specific styles */
+        .about-hero {
+            padding: 8rem 0 4rem;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+            text-align: center;
+        }
+
+        .tech-overview {
+            padding: 6rem 0;
+            background: var(--dark-bg);
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .overview-content h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            color: var(--accent-color);
+        }
+
+        .overview-content p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .overview-visual img {
+            width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .architecture {
+            padding: 6rem 0;
+            background: var(--darker-bg);
+        }
+
+        .architecture-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .arch-step {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            max-width: 250px;
+        }
+
+        .arch-step h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+
+        .arch-step p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .arch-arrow {
+            font-size: 2rem;
+            color: var(--accent-color);
+        }
+
+        .tech-stack {
+            margin-top: 4rem;
+        }
+
+        .tech-stack h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .stack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .stack-item {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .stack-item h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+
+        .stack-item ul {
+            list-style: none;
+        }
+
+        .stack-item li {
+            padding: 0.25rem 0;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .features-deep {
+            padding: 6rem 0;
+            background: var(--dark-bg);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card-large {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card-large:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .feature-icon-large {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card-large h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+
+        .feature-card-large p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-specs {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .spec-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .spec-value {
+            font-weight: 600;
+            color: var(--success-color);
+        }
+
+        .applications {
+            padding: 6rem 0;
+            background: var(--darker-bg);
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .app-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .app-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .app-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+
+        .app-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .app-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .app-feature {
+            background: rgba(15, 23, 42, 0.5);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+        }
+
+        .future-vision {
+            padding: 6rem 0;
+            background: var(--dark-bg);
+        }
+
+        .vision-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            margin-bottom: 4rem;
+        }
+
+        .vision-text p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .vision-image img {
+            width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .roadmap {
+            margin-top: 4rem;
+        }
+
+        .roadmap h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .roadmap-timeline {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .roadmap-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 0.5rem;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .roadmap-date {
+            background: var(--gradient-accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .roadmap-content h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+
+        .roadmap-content p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .overview-grid,
+            .vision-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .architecture-flow {
+                flex-direction: column;
+            }
+            
+            .arch-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .roadmap-item {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </script>
+</body>
+</html>

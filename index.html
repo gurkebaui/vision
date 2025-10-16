@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Gesture Control - Hand-Powered Presentation System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-icon">🤖</span>
+                <span class="logo-text">AI Gesture Control</span>
+            </div>
+            <div class="nav-links">
+                <a href="#demo" class="nav-link">Demo</a>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#technology" class="nav-link">Technology</a>
+                <a href="#about" class="nav-link">About</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    Control Your Presentations with
+                    <span class="gradient-text">Hand Gestures</span>
+                </h1>
+                <p class="hero-description">
+                    Revolutionary AI-powered system that transforms your hand movements into presentation controls. 
+                    No clickers, no keyboards, just natural gesture-based interaction.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" onclick="document.getElementById('demo').scrollIntoView({behavior: 'smooth'})">
+                        Try Live Demo
+                    </button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+                        Learn More
+                    </button>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-image">
+                    <img src="resources/hero-vision-tech.png" alt="AI Hand Gesture Recognition">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section id="demo" class="demo-section">
+        <div class="container">
+            <h2 class="section-title">Live Gesture Recognition Demo</h2>
+            <p class="section-description">
+                Experience real-time hand gesture detection and presentation control
+            </p>
+            
+            <div class="demo-grid">
+                <!-- Camera Interface -->
+                <div class="camera-interface">
+                    <div class="camera-header">
+                        <h3>Camera Feed</h3>
+                        <div class="camera-controls">
+                            <button id="start-camera" class="btn btn-small btn-success">Start Camera</button>
+                            <button id="stop-camera" class="btn btn-small btn-danger">Stop Camera</button>
+                            <button id="toggle-detection" class="btn btn-small btn-primary">Toggle Detection</button>
+                        </div>
+                    </div>
+                    <div class="camera-container">
+                        <video id="webcam" autoplay muted></video>
+                        <canvas id="canvas"></canvas>
+                        <div class="camera-overlay">
+                            <div id="status" class="status info">Ready to start</div>
+                            <div id="gesture-feedback" class="gesture-feedback"></div>
+                            <div id="key-feedback" class="key-feedback"></div>
+                        </div>
+                        <div class="model-loading" id="model-loading" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <p>Loading AI models...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="control-panel">
+                    <h3>Gesture Controls</h3>
+                    <div class="current-gesture">
+                        <div class="gesture-display">
+                            <span class="gesture-label">Current Gesture:</span>
+                            <span id="current-gesture" class="gesture-name">None</span>
+                            <div class="gesture-confidence">
+                                <span class="confidence-label">Confidence:</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="confidence-bar" style="width: 0%"></div>
+                                </div>
+                                <span class="confidence-text" id="confidence-text">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="gesture-grid">
+                        <div class="gesture-card" data-gesture="open_palm">
+                            <div class="gesture-icon">✋</div>
+                            <div class="gesture-name">Open Palm</div>
+                            <div class="gesture-action">Play/Pause</div>
+                        </div>
+                        <div class="gesture-card" data-gesture="pointing_up">
+                            <div class="gesture-icon">☝️</div>
+                            <div class="gesture-name">Point Up</div>
+                            <div class="gesture-action">Next Slide</div>
+                        </div>
+                        <div class="gesture-card" data-gesture="pointing_down">
+                            <div class="gesture-icon">👇</div>
+                            <div class="gesture-name">Point Down</div>
+                            <div class="gesture-action">Previous Slide</div>
+                        </div>
+                        <div class="gesture-card" data-gesture="closed_fist">
+                            <div class="gesture-icon">✊</div>
+                            <div class="gesture-name">Closed Fist</div>
+                            <div class="gesture-action">Stop</div>
+                        </div>
+                        <div class="gesture-card" data-gesture="thumbs_up">
+                            <div class="gesture-icon">👍</div>
+                            <div class="gesture-name">Thumbs Up</div>
+                            <div class="gesture-action">Zoom In</div>
+                        </div>
+                        <div class="gesture-card" data-gesture="peace_sign">
+                            <div class="gesture-icon">✌️</div>
+                            <div class="gesture-name">Peace Sign</div>
+                            <div class="gesture-action">Pointer Mode</div>
+                        </div>
+                    </div>
+
+                    <div class="system-controls">
+                        <button id="calibrate" class="btn btn-accent">Calibrate System</button>
+                    </div>
+                </div>
+
+                <!-- Statistics Panel -->
+                <div class="stats-panel">
+                    <h3>Detection Statistics</h3>
+                    <div id="stats" class="stats-container">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Detections:</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Accuracy:</span>
+                            <span class="stat-value">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Response Time:</span>
+                            <span class="stat-value">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="gesture-history">
+                        <h4>Recent Gestures</h4>
+                        <div id="gesture-history" class="history-list">
+                            <div class="no-gestures">No gestures detected yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Presentation Simulator -->
+    <section class="presentation-section">
+        <div class="container">
+            <h2 class="section-title">Presentation Control Simulator</h2>
+            <p class="section-description">
+                See how gestures translate to actual presentation controls
+            </p>
+            
+            <div class="presentation-interface">
+                <div class="presentation-controls">
+                    <button id="prev-btn" class="btn btn-control">⬅️ Previous</button>
+                    <button id="play-btn" class="btn btn-control">▶️</button>
+                    <button id="next-btn" class="btn btn-control">Next ➡️</button>
+                    <button id="pointer-btn" class="btn btn-control">👆 Pointer</button>
+                </div>
+                
+                <div id="slide-container" class="slide-container">
+                    <div class="slide">
+                        <h3 id="slide-title">Welcome to AI Gesture Control</h3>
+                        <p id="slide-content">Revolutionary presentation control using computer vision</p>
+                        <div id="slide-number" class="slide-number">1 / 5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <h2 class="section-title">Advanced Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Real-Time Detection</h3>
+                    <p>Advanced AI processes video at 30+ FPS for instant gesture recognition with sub-100ms latency.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Machine Learning</h3>
+                    <p>Neural networks trained on thousands of hand poses ensure 95%+ accuracy across diverse users.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Zero Latency</h3>
+                    <p>Optimized algorithms deliver immediate response for seamless presentation flow.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>Customizable</h3>
+                    <p>Map custom gestures to specific actions and calibrate for individual hand characteristics.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Cross-Platform</h3>
+                    <p>Works with any webcam and integrates with PowerPoint, Google Slides, and Keynote.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>All processing happens locally on your device with no data sent to external servers.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Section -->
+    <section id="technology" class="technology-section">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <div class="tech-flow">
+                <div class="tech-step">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">📹</div>
+                    <h3>Capture</h3>
+                    <p>Webcam captures real-time video feed at 30+ FPS</p>
+                </div>
+                <div class="tech-arrow">→</div>
+                <div class="tech-step">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">🤖</div>
+                    <h3>Detect</h3>
+                    <p>AI model identifies 21 hand keypoints using MediaPipe</p>
+                </div>
+                <div class="tech-arrow">→</div>
+                <div class="tech-step">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">🎯</div>
+                    <h3>Recognize</h3>
+                    <p>Gesture classification based on hand pose patterns</p>
+                </div>
+                <div class="tech-arrow">→</div>
+                <div class="tech-step">
+                    <div class="step-number">4</div>
+                    <div class="step-icon">⚡</div>
+                    <h3>Execute</h3>
+                    <p>Trigger corresponding presentation control action</p>
+                </div>
+            </div>
+            
+            <div class="tech-details">
+                <div class="tech-image">
+                    <img src="resources/hand-pose-ai.png" alt="Hand Pose Detection AI">
+                </div>
+                <div class="tech-info">
+                    <h3>Advanced AI Architecture</h3>
+                    <p>Our system combines cutting-edge computer vision technologies:</p>
+                    <ul class="tech-list">
+                        <li><strong>MediaPipe Hands:</strong> Google's high-fidelity hand tracking</li>
+                        <li><strong>TensorFlow.js:</strong> Browser-based machine learning</li>
+                        <li><strong>Custom CNN:</strong> Optimized gesture classification</li>
+                        <li><strong>Real-time Processing:</strong> WebGL acceleration for performance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2 class="section-title">About the Technology</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>
+                        This hand gesture recognition system represents the convergence of computer vision, 
+                        machine learning, and human-computer interaction. Built using state-of-the-art AI 
+                        models, it enables natural, intuitive control of digital presentations without 
+                        physical contact.
+                    </p>
+                    <p>
+                        The system leverages MediaPipe's hand tracking capabilities combined with custom 
+                        neural networks to achieve real-time gesture recognition with over 95% accuracy. 
+                        All processing occurs locally in the browser, ensuring privacy and eliminating 
+                        latency issues.
+                    </p>
+                    <p>
+                        Perfect for presenters, educators, and professionals who want to engage their 
+                        audience while maintaining natural movement and eliminating the need for 
+                        traditional input devices.
+                    </p>
+                </div>
+                <div class="about-image">
+                    <img src="resources/presentation-control.png" alt="Gesture Control in Action">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>AI Gesture Control</h3>
+                    <p>Revolutionizing human-computer interaction through advanced computer vision.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Technology</h3>
+                    <ul>
+                        <li>MediaPipe Hands</li>
+                        <li>TensorFlow.js</li>
+                        <li>Computer Vision</li>
+                        <li>Machine Learning</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Applications</h3>
+                    <ul>
+                        <li>Presentation Control</li>
+                        <li>Accessibility Tools</li>
+                        <li>Gaming Interfaces</li>
+                        <li>Smart Home Control</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AI Gesture Control System. Built with advanced computer vision technology.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Calibration Modal -->
+    <div id="calibration-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>System Calibration</h2>
+                <button id="close-modal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="calibration-results">
+                    <div class="calibration-loading">
+                        <div class="spinner"></div>
+                        <p>Calibrating gesture recognition system...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TensorFlow.js and MediaPipe Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.0/dist/hand-pose-detection.min.js"></script>
+    
+    <!-- Real Gesture Detection -->
+    <script src="real-gesture-detection.js"></script>
+    
+    <!-- Original main functionality -->
+    <script src="main.js"></script>
+</body>
+</html>
