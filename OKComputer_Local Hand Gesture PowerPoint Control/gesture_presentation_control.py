@@ -87,7 +87,7 @@ class GesturePresentationController:
         extended_count = 0
         extended_fingers = []
         
-        # Thumb (special case)
+        # Thumb (special case) not included for now
         """thumb_tip = landmarks[4]
         thumb_ip = landmarks[3]
         thumb_mcp = landmarks[2]
