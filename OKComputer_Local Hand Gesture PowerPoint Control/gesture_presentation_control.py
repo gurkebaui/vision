@@ -146,7 +146,7 @@ class GesturePresentationController:
             gesture = "pointing_up"
             confidence = 0.45
         
-        # Thumbs Up (only thumb extended)
+        # Thumbs Up (only thumb extended) not included for now
         elif extended_count == 1 and 'thumb' in extended_fingers:
             gesture = "thumbs_up"
             confidence = 0.8
