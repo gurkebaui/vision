@@ -16,14 +16,14 @@ A Python application that uses computer vision and machine learning to control P
 
 | Gesture | Action | Description |
 |---------|--------|-------------|
-| ✋ **Open Palm** | Play/Pause | Start or pause presentation |
-| ✊ **Closed Fist** | Stop | Exit presentation mode |
-| ☝️ **Point Up** | Next Slide | Go to next slide |
-| 👇 **Point Down** | Previous Slide | Go to previous slide |
-| 👍 **Thumbs Up** | Zoom In | Zoom in on current slide |
-| ✌️ **Peace Sign** | Toggle Pointer | Show/hide presentation pointer |
+| ✋ **Open Palm** | Space | next |
+| ✊ **Closed Fist** | nothing | Exit presentation mode |
+| ☝️ **Point Up** | activating | do this before the other poses to activate tracking |
+| 👇 **Point Down** | not working | (will) Go to previous slide |
+| 👍 **Thumbs Up** | not included yet |  |
+| ✌️ **Middle Finger** | escape | Exit presentation mode |
 | 👈 **Swipe Left** | Previous Slide | Navigate to previous slide |
-| 👉 **Swipe Right** | Next Slide | Navigate to next slide |
+| 👉 **Swipe Right** | yet to implement | Navigate to next slide |
 
 ## 🚀 Quick Start
 
