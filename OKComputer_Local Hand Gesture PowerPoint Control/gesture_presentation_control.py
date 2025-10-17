@@ -22,8 +22,8 @@ class GesturePresentationController:
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.5
+            min_detection_confidence=0.2,
+            min_tracking_confidence=0.1
         )
         self.mp_draw = mp.solutions.drawing_utils
         
@@ -144,7 +144,7 @@ class GesturePresentationController:
         # Pointing Up (only index finger extended)
         elif extended_count == 1 and 'index' in extended_fingers:
             gesture = "pointing_up"
-            confidence = 0.85
+            confidence = 0.45
         
         # Thumbs Up (only thumb extended)
         elif extended_count == 1 and 'thumb' in extended_fingers:
@@ -153,7 +153,7 @@ class GesturePresentationController:
 
         elif extended_count == 1 and 'pinky' in extended_fingers:
             gesture = "pinky_up"
-            confidence = 0.85
+            confidence = 0.45
         
         # Peace Sign (index and middle fingers extended)
         elif extended_count == 1 and  'middle' in extended_fingers:
@@ -204,12 +204,12 @@ class GesturePresentationController:
             command_executed = True
         
         elif gesture == "closed_fist":
-            pyautogui.press('escape')
+            pyautogui.press('f')
             command_name = "Stop Presentation"
             command_executed = True
         
         elif gesture == "pointing_up" or gesture == "swipe_right":
-            pyautogui.press('right')
+            #pyautogui.press('right')
             command_name = "Next Slide"
             command_executed = True
         
@@ -224,7 +224,7 @@ class GesturePresentationController:
             command_executed = True
         
         elif gesture == "peace_sign":
-            pyautogui.hotkey('f')
+            pyautogui.hotkey('escape')
             command_name = "Toggle Pointer"
             command_executed = True
         
@@ -241,7 +241,7 @@ class GesturePresentationController:
 
         
         # Detect finger lift (from closed fist to any gesture)
-        if not self.finger_lift_detected and extended_count > 0 and gesture == "pinky_up" :
+        if not self.finger_lift_detected and extended_count > 0 and gesture == "pointing_up" :
             # Check if we had a closed fist recently
             recent_gestures = [g for g in self.gesture_buffer if g['extended_count'] == 0]
             if recent_gestures:
