@@ -20,11 +20,9 @@ class GesturePresentationController:
         # Initialize MediaPipe Hands
         self.mp_hands = mp.solutions.hands
         self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.2,
-            min_tracking_confidence=0.1
-        )
+            model_complexity=1,
+            min_detection_confidence=0.3,
+            min_tracking_confidence=0.3)
         self.mp_draw = mp.solutions.drawing_utils
         
         # Gesture detection variables
@@ -42,6 +40,14 @@ class GesturePresentationController:
         self.cap = None
         self.display_width = 1280
         self.display_height = 720
+
+        # Upscaling options
+        self.enable_ai_upscaling = False # Set to True to enable AI upscaling (if implemented)
+        self.upscale_factor = 2 # Factor to upscale the ROI
+
+        self.last_hand_bbox = None # Stores the bounding box of the last detected hand [x_min, y_min, x_max, y_max]
+        self.frames_without_detection = 0 # Counter for consecutive frames without hand detection
+        self.max_frames_to_search = 3 # Number of frames to search before zooming out (increased for smoother tracking)
         
         # Statistics
         self.detection_stats = {
@@ -132,19 +138,19 @@ class GesturePresentationController:
         confidence = 0.0
         
         # Open Palm (all fingers extended)
-        if extended_count >= 4:
+        if extended_count >= 3:
             gesture = "open_palm"
-            confidence = 0.9
+            confidence = 0.1
         
         # Closed Fist (no fingers extended)
         elif extended_count == 0:
             gesture = "closed_fist"
-            confidence = 0.25
+            confidence = 0.85
         
         # Pointing Up (only index finger extended)
         elif extended_count == 1 and 'index' in extended_fingers:
             gesture = "pointing_up"
-            confidence = 0.45
+            confidence = 0.15
         
         # Thumbs Up (only thumb extended) not included for now
         elif extended_count == 1 and 'thumb' in extended_fingers:
@@ -263,7 +269,7 @@ class GesturePresentationController:
         
         # Background overlay
         overlay = frame.copy()
-        cv2.rectangle(overlay, (10, 10), (400, 150), (30, 30, 30), -1)
+        cv2.rectangle(overlay, (10, 10), (400, 150), (30, 30, 30), 1)
         cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
         
         # Gesture information
@@ -359,20 +365,79 @@ class GesturePresentationController:
                 # Flip frame horizontally for mirror effect
                 frame = cv2.flip(frame, 1)
                 
-                # Convert BGR to RGB
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                processed_image = frame.copy()
+                h, w, _ = processed_image.shape
+
+                # Determine if we should use an ROI or the full frame
+                use_roi = False
+                if self.last_hand_bbox and self.frames_without_detection < self.max_frames_to_search:
+                    use_roi = True
+                    x_min, y_min, x_max, y_max = self.last_hand_bbox
+                    # Add some padding to the bounding box
+                    padding = 100 # Increased padding for better hand movement tolerance
+                    x_min = max(0, x_min - padding)
+                    y_min = max(0, y_min - padding)
+                    x_max = min(w, x_max + padding)
+                    y_max = min(h, y_max + padding)
+
+                    # Crop the image to the ROI
+                    cropped_roi = frame[y_min:y_max, x_min:x_max]
+                    
+                    # Resize the ROI to a larger size (zoom effect)
+                    if cropped_roi.shape[0] > 0 and cropped_roi.shape[1] > 0:
+                        processed_image = cv2.resize(cropped_roi, (w, h), interpolation=cv2.INTER_LINEAR)
+                    else:
+                        processed_image = frame.copy() # Fallback to full frame if ROI is invalid
+                        self.last_hand_bbox = None # Reset bbox if it became invalid
+                        self.frames_without_detection = 0 # Reset counter as we are processing full frame
+                        use_roi = False # No ROI used
+
+                if not use_roi:
+                    processed_image = frame.copy() # Process full frame
+
+                processed_image.flags.writeable = False
+                processed_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB)
+                # Apply contrast adjustment to enhance hand features
+                processed_image = cv2.convertScaleAbs(processed_image, alpha=1.2, beta=0)
+                # Apply sharpening filter to make hand features more distinct
+                kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+                processed_image = cv2.filter2D(processed_image, -1, kernel)
+
+                # Placeholder for AI Upscaling (opt-in)
+                if self.enable_ai_upscaling:
+                    # Implement AI upscaling here if desired and feasible
+                    # Example: processed_image = upscale_function(processed_image, self.upscale_factor)
+                    pass # Currently no AI upscaling implemented
                 
                 # Process frame with MediaPipe
-                results = self.hands.process(rgb_frame)
+                results = self.hands.process(processed_image)
                 
                 gesture = None
                 confidence = 0.0
                 extended_count = 0
                 
                 if results.multi_hand_landmarks:
+                    self.frames_without_detection = 0 # Reset counter on successful detection
                     # Use the first detected hand
                     hand_landmarks = results.multi_hand_landmarks[0]
                     
+                    # Calculate bounding box for the current hand
+                    x_coords = [lm.x for lm in hand_landmarks.landmark]
+                    y_coords = [lm.y for lm in hand_landmarks.landmark]
+                    
+                    # Convert normalized coordinates to pixel coordinates
+                    x_min_px = int(min(x_coords) * w)
+                    y_min_px = int(min(y_coords) * h)
+                    x_max_px = int(max(x_coords) * w)
+                    y_max_px = int(max(y_coords) * h)
+
+                    # Store the current hand's bounding box
+                    self.last_hand_bbox = [x_min_px, y_min_px, x_max_px, y_max_px]
+
+                    # MediaPipe landmarks are normalized to the input image (processed_image).
+                    # Since processed_image is resized to (w,h), these normalized landmarks
+                    # can be directly used for drawing on the original 'frame'.
+
                     # Convert landmarks to proper format
                     landmarks = []
                     for lm in hand_landmarks.landmark:
@@ -393,12 +458,44 @@ class GesturePresentationController:
                     finger_lift_active = self.check_finger_lift_trigger(extended_count, gesture)
                     
                     # Execute command if gesture detected and window is active
-                    if gesture and finger_lift_active and confidence > 0.7:
+                    if gesture and finger_lift_active and confidence > 0.7: # Consider adjusting confidence threshold for ROI
                         self.execute_presentation_command(gesture)
                     
                     # Draw hand landmarks
                     self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
+                else:
+                    self.frames_without_detection += 1 # Increment counter if no hand is detected
+                    # self.last_hand_bbox is NOT reset here, it's maintained for a few frames
+
+                # Update statistics
+                self.detection_stats['total_frames'] += 1
                 
+                # Draw UI elements
+                self.draw_gesture_info(frame, gesture, confidence, extended_count)
+                self.draw_statistics(frame)
+                
+                # Draw ROI rectangle if an ROI was used
+                if self.last_hand_bbox and self.frames_without_detection < self.max_frames_to_search:
+                    x_min, y_min, x_max, y_max = self.last_hand_bbox
+                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2) # Green rectangle for ROI
+                    cv2.putText(frame, "ROI Active", (x_min + 5, y_min + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+                # Display frame
+                cv2.imshow('AI Gesture Presentation Control', frame)
+                
+                # Handle key presses
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('q'):
+                    print("\n👋 Quitting application...")
+                    break
+                elif key == ord('r'):
+                    print("\n🔄 Resetting gesture detection...")
+                    self.finger_lift_detected = False
+                    self.gesture_buffer.clear()
+                    self.previous_landmarks = None
+                    self.last_hand_bbox = None # Reset bbox on manual reset
+                    self.frames_without_detection = 0 # Reset counter on manual reset
+
                 # Update statistics
                 self.detection_stats['total_frames'] += 1
                 
