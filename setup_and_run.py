@@ -19,7 +19,7 @@ class LauncherApp:
     def __init__(self, root):
         self.root = root
         self.root.title("AI Gesture Control - Launcher")
-        self.root.geometry("500x450")
+        self.root.geometry("500x500")
         self.root.resizable(False, False)
         
         # Style
@@ -42,24 +42,31 @@ class LauncherApp:
         self.camera_var = tk.IntVar(value=0)
         camera_spin = ttk.Spinbox(main_frame, from_=0, to=10, textvariable=self.camera_var, width=5)
         camera_spin.grid(row=0, column=1, sticky="w", pady=10)
+
+        # 1b. Resolution Selection
+        ttk.Label(main_frame, text="Resolution:").grid(row=0, column=2, sticky="w", pady=10, padx=(20, 5))
+        self.res_var = tk.StringVar(value="640x480 (Fast)")
+        res_combo = ttk.Combobox(main_frame, textvariable=self.res_var, state="readonly", width=15)
+        res_combo['values'] = ("640x480 (Fast)", "1280x720 (High Res)")
+        res_combo.grid(row=0, column=3, sticky="w", pady=10)
         
-        # 2. Motion Smoothing
+        # 2. Smoothing Factor
         ttk.Label(main_frame, text="Motion Smoothing:").grid(row=1, column=0, sticky="w", pady=10)
         self.smooth_var = tk.DoubleVar(value=0.6)
         smooth_scale = ttk.Scale(main_frame, from_=0.1, to=0.95, variable=self.smooth_var, orient="horizontal", length=200)
-        smooth_scale.grid(row=1, column=1, sticky="w", pady=10)
+        smooth_scale.grid(row=1, column=1, sticky="w", pady=10, columnspan=2)
         # Label to show value
         self.smooth_label = ttk.Label(main_frame, text="0.6")
-        self.smooth_label.grid(row=1, column=2, padx=5)
+        self.smooth_label.grid(row=1, column=3, padx=5)
         smooth_scale.configure(command=lambda v: self.smooth_label.config(text=f"{float(v):.2f}"))
 
         # 3. Mouse Sensitivity (Logic placeholder)
         ttk.Label(main_frame, text="Mouse Speed:").grid(row=2, column=0, sticky="w", pady=10)
         self.speed_var = tk.DoubleVar(value=1.5)
         speed_scale = ttk.Scale(main_frame, from_=0.5, to=5.0, variable=self.speed_var, orient="horizontal", length=200)
-        speed_scale.grid(row=2, column=1, sticky="w", pady=10)
+        speed_scale.grid(row=2, column=1, sticky="w", pady=10, columnspan=2)
         self.speed_label = ttk.Label(main_frame, text="1.5")
-        self.speed_label.grid(row=2, column=2, padx=5)
+        self.speed_label.grid(row=2, column=3, padx=5)
         speed_scale.configure(command=lambda v: self.speed_label.config(text=f"{float(v):.1f}"))
 
         # Instructions
@@ -67,19 +74,19 @@ class LauncherApp:
             "Instructions:\n"
             "• 'Peace' (✌️) > 1s: Toggle Mouse Mode\n"
             "• Point Up (☝️): Activate Gesture Mode (3s window)\n"
-            "• Gestures: Palm=Play, Fist=Stop, Swipe=Slide"
+            "• Gestures: Palm=Play, Fist=Stop, Swipe/Shaka=Slide"
         )
         info_label = tk.Label(main_frame, text=info_text, justify="left", bg="#f0f0f0", relief="sunken", padx=10, pady=10)
-        info_label.grid(row=3, column=0, columnspan=3, sticky="we", pady=20)
+        info_label.grid(row=3, column=0, columnspan=4, sticky="we", pady=20)
 
         # Start Button
         self.start_btn = tk.Button(main_frame, text="🚀 START CONTROL", bg="#27ae60", fg="white", 
                                    font=("Helvetica", 12, "bold"), command=self.start_app)
-        self.start_btn.grid(row=4, column=0, columnspan=3, sticky="we", pady=10)
+        self.start_btn.grid(row=4, column=0, columnspan=4, sticky="we", pady=10)
 
         # Status
         self.status_label = ttk.Label(main_frame, text="Ready", foreground="gray")
-        self.status_label.grid(row=5, column=0, columnspan=3)
+        self.status_label.grid(row=5, column=0, columnspan=4)
 
     def start_app(self):
         try:
@@ -107,10 +114,19 @@ class LauncherApp:
             smooth = self.smooth_var.get()
             speed = self.speed_var.get()
             
+            # Parse Resolution
+            res_str = self.res_var.get()
+            if "1280" in res_str:
+                w, h = 1280, 720
+            else:
+                w, h = 640, 480
+            
             controller = GesturePresentationController(
                 camera_index=cam_idx,
                 smoothing=smooth,
-                mouse_speed=speed
+                mouse_speed=speed,
+                width=w,
+                height=h
             )
             controller.run()
             

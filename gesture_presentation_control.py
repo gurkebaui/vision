@@ -37,7 +37,7 @@ class HandSmoother:
         return smoothed
 
 class GesturePresentationController:
-    def __init__(self, camera_index=0, smoothing=0.6, mouse_speed=1.5):
+    def __init__(self, camera_index=0, smoothing=0.6, mouse_speed=1.5, width=640, height=480):
         # Configuration
         self.camera_index = camera_index
         self.mouse_speed = mouse_speed
@@ -67,7 +67,7 @@ class GesturePresentationController:
         # 3-Second Window Logic
         self.control_window_active = False
         self.control_window_start = 0
-        self.control_window_duration = 3.0
+        self.control_window_duration = 2.0
         
         # Mouse Mode State
         self.mouse_mode = False
@@ -79,14 +79,14 @@ class GesturePresentationController:
         
         # Camera Setup
         self.cap = None
-        self.display_width = 1280
-        self.display_height = 720
+        self.display_width = width
+        self.display_height = height
         
         # PyAutoGUI Settings
         pyautogui.FAILSAFE = False # Disable failsafe for corner reaching
         pyautogui.PAUSE = 0.0 # No delay for smoother mouse
 
-        print(f"🤖 AI Presentation Control Initialized (Cam: {camera_index}, Smooth: {smoothing}, MouseSpeed: {mouse_speed})")
+        print(f"🤖 AI Presentation Control Initialized (Cam: {camera_index}, Res: {width}x{height}, Smooth: {smoothing})")
 
     def start_camera(self):
         self.cap = cv2.VideoCapture(self.camera_index)
@@ -160,6 +160,7 @@ class GesturePresentationController:
         if count == 1 and 'thumb' in extended_fingers: return "thumbs_up"
         if count == 2 and 'index' in extended_fingers and 'middle' in extended_fingers: return "peace"
         if count == 2 and 'thumb' in extended_fingers and 'pinky' in extended_fingers: return "shaka"
+        if count == 1 and 'middle' in extended_fingers: return "middle_finger"
         
         return "unknown"
 
@@ -266,11 +267,20 @@ class GesturePresentationController:
             #elif pose == "thumbs_up":
                 #command = "zoom_in"
                 #pyautogui.hotkey('ctrl', '+') 
+            elif dynamic_gesture == "middle_finger":
+                command = "close"
+                pyautogui.press('Q')
 
             if command:
                 self.last_action_time = current_time
-                # Extend window on successful action (keep active)
-                self.control_window_start = current_time 
+                
+                # Special Case: Navigation commands force re-activation (Strict Mode)
+                if command in ["next_slide", "prev_slide"]:
+                    self.control_window_active = False
+                else:
+                    # Other commands (Zoom, Play, etc.) keep the window open
+                    self.control_window_start = current_time 
+                
                 return command
                 
         return None
