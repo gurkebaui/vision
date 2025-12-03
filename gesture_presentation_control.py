@@ -217,7 +217,7 @@ class GesturePresentationController:
         if pose == "peace":
             if self.gesture_start_time == 0:
                 self.gesture_start_time = current_time
-            elif current_time - self.gesture_start_time > 1.0:
+            elif current_time - self.gesture_start_time > 0.7:
                 # Toggle
                 self.mouse_mode = not self.mouse_mode
                 self.gesture_start_time = 0 # Reset
