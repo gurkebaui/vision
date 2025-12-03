@@ -261,15 +261,15 @@ class GesturePresentationController:
             #elif pose == "open_palm":
                 #command = "play_pause"
                 #pyautogui.press('space')
-            elif pose == "fist":
-                command = "stop"
-                pyautogui.press('escape')
+            #elif pose == "fist":
+                #command = "stop"
+                #pyautogui.press('escape')
             #elif pose == "thumbs_up":
                 #command = "zoom_in"
                 #pyautogui.hotkey('ctrl', '+') 
-            elif dynamic_gesture == "middle_finger":
-                command = "close"
-                pyautogui.press('Q')
+            #elif dynamic_gesture == "middle_finger":
+                #command = "close"
+                #pyautogui.press('Q')
 
             if command:
                 self.last_action_time = current_time
