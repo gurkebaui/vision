@@ -1,174 +1,145 @@
 #!/usr/bin/env python3
 """
-Setup and Run Script for AI Gesture Presentation Control
-Installs required packages and runs the gesture control application
+Setup and Launcher for AI Gesture Control
+Provides a GUI to configure and start the application.
 """
 
-import subprocess
+import tkinter as tk
+from tkinter import ttk, messagebox
 import sys
 import os
-import platform
+import subprocess
+import threading
 
-def install_package(package):
-    """Install a package using pip"""
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        return True
-    except subprocess.CalledProcessError:
-        return False
+# Try to import the main controller class
+# We need to add the current directory to path just in case
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-def check_package(package):
-    """Check if a package is installed"""
-    try:
-        __import__(package.replace('-', '_'))
-        return True
-    except ImportError:
-        return False
-
-def setup_environment():
-    """Set up the Python environment with required packages"""
-    print("🔧 Setting up AI Gesture Control environment...")
-    print("=" * 50)
-    
-    required_packages = [
-        "opencv-python",
-        "mediapipe", 
-        "pyautogui",
-        "numpy",
-        "Pillow"
-    ]
-    
-    missing_packages = []
-    
-    for package in required_packages:
-        print(f"Checking {package}...", end=" ")
-        if check_package(package):
-            print("✅ Already installed")
-        else:
-            print("❌ Missing")
-            missing_packages.append(package)
-    
-    if missing_packages:
-        print(f"\n📦 Installing {len(missing_packages)} missing packages...")
+class LauncherApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("AI Gesture Control - Launcher")
+        self.root.geometry("500x450")
+        self.root.resizable(False, False)
         
-        for package in missing_packages:
-            print(f"Installing {package}...", end=" ")
-            if install_package(package):
-                print("✅ Success")
-            else:
-                print("❌ Failed")
-                return False
-    
-    print("\n✅ Environment setup complete!")
-    return True
+        # Style
+        style = ttk.Style()
+        style.configure("TButton", padding=6, relief="flat", background="#ccc")
+        style.configure("TLabel", font=("Helvetica", 11))
+        
+        # Header
+        header_frame = tk.Frame(root, bg="#2c3e50", height=80)
+        header_frame.pack(fill="x")
+        tk.Label(header_frame, text="AI Gesture Control", font=("Helvetica", 18, "bold"), 
+                 bg="#2c3e50", fg="white").pack(pady=20)
 
-def check_system_requirements():
-    """Check system requirements"""
-    print("\n🔍 Checking system requirements...")
-    print("=" * 30)
-    
-    # Check Python version
-    python_version = sys.version_info
-    print(f"Python version: {python_version.major}.{python_version.minor}.{python_version.micro}")
-    
-    if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 7):
-        print("❌ Python 3.7 or higher is required")
-        return False
-    
-    # Check operating system
-    os_name = platform.system()
-    print(f"Operating System: {os_name} {platform.release()}")
-    
-    if os_name not in ["Windows", "Darwin", "Linux"]:
-        print("⚠️  Unsupported operating system")
-        return False
-    
-    # Check for camera
-    try:
-        import cv2
-        cap = cv2.VideoCapture(0)
-        if cap.isOpened():
-            print("✅ Camera detected")
-            cap.release()
-        else:
-            print("⚠️  No camera detected - application may not work properly")
-    except:
-        print("⚠️  Cannot check camera - OpenCV not installed")
-    
-    return True
+        # Main Content
+        main_frame = ttk.Frame(root, padding="20")
+        main_frame.pack(fill="both", expand=True)
+        
+        # 1. Camera Selection
+        ttk.Label(main_frame, text="Camera Index:").grid(row=0, column=0, sticky="w", pady=10)
+        self.camera_var = tk.IntVar(value=0)
+        camera_spin = ttk.Spinbox(main_frame, from_=0, to=10, textvariable=self.camera_var, width=5)
+        camera_spin.grid(row=0, column=1, sticky="w", pady=10)
+        
+        # 2. Motion Smoothing
+        ttk.Label(main_frame, text="Motion Smoothing:").grid(row=1, column=0, sticky="w", pady=10)
+        self.smooth_var = tk.DoubleVar(value=0.6)
+        smooth_scale = ttk.Scale(main_frame, from_=0.1, to=0.95, variable=self.smooth_var, orient="horizontal", length=200)
+        smooth_scale.grid(row=1, column=1, sticky="w", pady=10)
+        # Label to show value
+        self.smooth_label = ttk.Label(main_frame, text="0.6")
+        self.smooth_label.grid(row=1, column=2, padx=5)
+        smooth_scale.configure(command=lambda v: self.smooth_label.config(text=f"{float(v):.2f}"))
 
-def provide_usage_instructions():
-    """Provide usage instructions"""
-    print("\n📖 Usage Instructions")
-    print("=" * 30)
-    print("1. Make sure PowerPoint is open with your presentation")
-    print("2. Start the presentation mode (F5 or Shift+F5)")
-    print("3. Run this application")
-    print("4. Position your hand in front of the camera")
-    print("5. Lift a finger to activate the 3-second gesture window")
-    print("6. Perform a gesture within 3 seconds")
-    print("7. Watch as PowerPoint responds to your gestures!")
-    
-    print("\n🎯 Gesture Commands:")
-    print("  ✋ Open Palm     - Play/Pause presentation")
-    print("  ✊ Closed Fist   - Stop presentation") 
-    print("  ☝️ Point Up       - Next slide")
-    print("  👇 Point Down     - Previous slide")
-    print("  👍 Thumbs Up      - Zoom in")
-    print("  ✌️ Peace Sign      - Toggle pointer mode")
-    print("  👈 Swipe Left     - Previous slide")
-    print("  👉 Swipe Right    - Next slide")
-    
-    print("\n⚙️  Controls:")
-    print("  'q' - Quit application")
-    print("  'r' - Reset gesture detection")
+        # 3. Mouse Sensitivity (Logic placeholder)
+        ttk.Label(main_frame, text="Mouse Speed:").grid(row=2, column=0, sticky="w", pady=10)
+        self.speed_var = tk.DoubleVar(value=1.5)
+        speed_scale = ttk.Scale(main_frame, from_=0.5, to=5.0, variable=self.speed_var, orient="horizontal", length=200)
+        speed_scale.grid(row=2, column=1, sticky="w", pady=10)
+        self.speed_label = ttk.Label(main_frame, text="1.5")
+        self.speed_label.grid(row=2, column=2, padx=5)
+        speed_scale.configure(command=lambda v: self.speed_label.config(text=f"{float(v):.1f}"))
 
-def main():
-    """Main setup and run function"""
-    print("🚀 AI Gesture Presentation Control Setup")
-    print("=" * 50)
-    print("This script will check and install required packages,")
-    print("then run the gesture control application.")
-    
-    # Check system requirements
-    if not check_system_requirements():
-        print("\n❌ System requirements not met. Please check the requirements above.")
-        return
-    
-    # Setup environment
-    if not setup_environment():
-        print("\n❌ Environment setup failed. Please check the error messages above.")
-        return
-    
-    # Provide usage instructions
-    provide_usage_instructions()
-    
-    # Ask user if they want to continue
-    print("\n🚀 Ready to start the application!")
-    response = input("Do you want to start the gesture control application now? (y/n): ").lower().strip()
-    
-    if response in ['y', 'yes', '']:
-        print("\n🎯 Starting AI Gesture Control...")
+        # Instructions
+        info_text = (
+            "Instructions:\n"
+            "• 'Peace' (✌️) > 1s: Toggle Mouse Mode\n"
+            "• Point Up (☝️): Activate Gesture Mode (3s window)\n"
+            "• Gestures: Palm=Play, Fist=Stop, Swipe=Slide"
+        )
+        info_label = tk.Label(main_frame, text=info_text, justify="left", bg="#f0f0f0", relief="sunken", padx=10, pady=10)
+        info_label.grid(row=3, column=0, columnspan=3, sticky="we", pady=20)
+
+        # Start Button
+        self.start_btn = tk.Button(main_frame, text="🚀 START CONTROL", bg="#27ae60", fg="white", 
+                                   font=("Helvetica", 12, "bold"), command=self.start_app)
+        self.start_btn.grid(row=4, column=0, columnspan=3, sticky="we", pady=10)
+
+        # Status
+        self.status_label = ttk.Label(main_frame, text="Ready", foreground="gray")
+        self.status_label.grid(row=5, column=0, columnspan=3)
+
+    def start_app(self):
         try:
-            # Import and run the main application
+            # Check imports
+            import cv2
+            import mediapipe
+            import pyautogui
+        except ImportError as e:
+            messagebox.showerror("Missing Packages", f"Please install requirements first!\nError: {e}")
+            return
+
+        self.start_btn.config(state="disabled", text="Running...")
+        self.status_label.config(text="Application is running. Press 'q' in camera window to stop.")
+        
+        # Run in separate thread to keep GUI responsive
+        thread = threading.Thread(target=self.run_controller_thread)
+        thread.daemon = True
+        thread.start()
+
+    def run_controller_thread(self):
+        try:
             from gesture_presentation_control import GesturePresentationController
             
-            controller = GesturePresentationController()
+            cam_idx = self.camera_var.get()
+            smooth = self.smooth_var.get()
+            speed = self.speed_var.get()
+            
+            controller = GesturePresentationController(
+                camera_index=cam_idx,
+                smoothing=smooth,
+                mouse_speed=speed
+            )
             controller.run()
             
-        except ImportError as e:
-            print(f"❌ Error importing main module: {e}")
-            print("\nPlease make sure all packages are installed correctly.")
-            print("You can try installing them manually:")
-            print("pip install -r requirements.txt")
-        
         except Exception as e:
-            print(f"❌ Error running application: {e}")
-            print("\nPlease check the error message and try again.")
+            messagebox.showerror("Error", f"Application crashed:\n{e}")
+        finally:
+            # Reset UI when done
+            self.root.after(0, lambda: self.start_btn.config(state="normal", text="🚀 START CONTROL"))
+            self.root.after(0, lambda: self.status_label.config(text="Stopped."))
+
+def main():
+    # Check if packages are installed
+    required = ["opencv-python", "mediapipe", "pyautogui", "numpy"]
+    missing = []
     
-    else:
-        print("\n👋 Setup complete. You can run the application later with:")
-        print("python gesture_presentation_control.py")
+    # Minimal check before GUI
+    for pkg in required:
+        try:
+            __import__(pkg.split('-')[0].replace('opencv', 'cv2').replace('pyautogui', 'pyautogui'))
+        except ImportError:
+            missing.append(pkg)
+            
+    if missing:
+        print("Installing missing packages...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
+
+    root = tk.Tk()
+    app = LauncherApp(root)
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
