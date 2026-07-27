@@ -1,0 +1,39 @@
+# GestureKit -- media profile
+# Couch-distance control for video players (VLC, mpv, YouTube, Netflix).
+# Tuned for a hand that is further from the camera and moving less precisely.
+
+name: media
+extends: desktop
+description: Play, seek, volume and fullscreen for video players.
+
+engine:
+  enable_pointer: false
+  enable_scroll: false
+  cooldown: 0.55
+  static_min_score: 0.64
+  swipe:
+    min_distance: 1.0       # more forgiving at couch distance
+    min_speed: 1.9
+
+gestures:
+  open_palm:   { key: space,      label: "Play / pause" }
+  closed_fist: { key: space,      label: "Play / pause" }
+  swipe_right: { key: right,      label: "Seek forward" }
+  swipe_left:  { key: left,       label: "Seek back" }
+  swipe_up:    { key: volumeup,   label: "Volume up",   repeat: 4 }
+  swipe_down:  { key: volumedown, label: "Volume down", repeat: 4 }
+  thumbs_up:   { key: volumeup,   label: "Volume up",   repeat: 2 }
+  thumbs_down: { key: volumedown, label: "Volume down", repeat: 2 }
+  peace:       { key: f,          label: "Fullscreen" }
+  three:       { key: volumemute, label: "Mute" }
+  point_up:    { key: up,         label: "Volume up (player)" }
+  point_down:  { key: down,       label: "Volume down (player)" }
+  ok:          { key: esc,        label: "Exit fullscreen" }
+  wave:        { mode: desktop,   label: "Switch to desktop mode" }
+
+  # streaming pointer disabled in this profile
+  cursor_move: null
+  click:       null
+  drag_start:  null
+  drag_end:    null
+  scroll:      null

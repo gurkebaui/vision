@@ -1,0 +1,54 @@
+# GestureKit -- accessibility profile
+# Maximum tolerance: long dwell times, low thresholds, generous cooldowns.
+# Intended for users with limited or tremor-affected hand movement, and as a
+# starting point when the default profiles feel too twitchy.
+
+name: accessibility
+description: Forgiving thresholds, dwell-based activation, minimal gestures.
+
+camera:
+  width: 1280
+  height: 720
+  fps: 30
+
+tracker:
+  num_hands: 1
+  min_detection_confidence: 0.5
+  min_tracking_confidence: 0.5
+  filter_min_cutoff: 0.6      # heavier smoothing damps tremor
+  filter_beta: 0.02
+
+engine:
+  require_arm: false
+  cooldown: 1.20              # long gap: no accidental double-fires
+  global_cooldown: 0.40
+  static_min_frames: 9        # ~0.3 s dwell before anything happens
+  static_min_score: 0.55      # accept less precise hand shapes
+  static_margin: 0.06
+  enable_swipes: true
+  enable_circles: false
+  enable_wave: false
+  enable_pointer: false
+  enable_scroll: false
+  enable_zoom: false
+  swipe:
+    min_distance: 0.85
+    min_speed: 1.4
+    max_duration: 0.90
+    min_straightness: 0.70
+
+ui:
+  show_scores: true           # visible feedback helps a lot here
+  show_trail: false
+
+gestures:
+  open_palm:   { key: space, label: "Select / activate" }
+  closed_fist: { key: esc,   label: "Cancel" }
+  point_up:    { key: up,    label: "Up" }
+  point_down:  { key: down,  label: "Down" }
+  point_left:  { key: left,  label: "Left" }
+  point_right: { key: right, label: "Right" }
+  swipe_left:  { key: right, label: "Next" }
+  swipe_right: { key: left,  label: "Previous" }
+  thumbs_up:   { key: enter, label: "Confirm" }
+  peace:       { key: tab,   label: "Next field" }

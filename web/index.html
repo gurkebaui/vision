@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestureKit — browser demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="dot"></span>
+    <strong>GestureKit</strong>
+    <span class="muted">browser demo</span>
+  </div>
+  <nav>
+    <a href="https://github.com/gurkebaui/vision" target="_blank" rel="noopener">Source</a>
+  </nav>
+</header>
+
+<main>
+  <section class="intro">
+    <h1>Hand-gesture recognition, running locally in your browser</h1>
+    <p>
+      This page runs the same recognition logic as the Python desktop app —
+      the geometry, the smooth scoring rules, the temporal stabiliser — on top
+      of MediaPipe's web build. Video never leaves your machine; there is no
+      server and no upload.
+    </p>
+    <p class="note">
+      This is a <strong>demo of the recogniser</strong>. It shows what the
+      desktop app detects. It cannot press keys or move your mouse — browsers
+      deliberately forbid that. For real control, run the Python app:
+      <code>pipx install gesturekit &amp;&amp; gesturekit run</code>
+    </p>
+  </section>
+
+  <section class="stage">
+    <div class="viewport">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="placeholder" class="placeholder">
+        <p>Camera is off</p>
+        <button id="start" class="primary">Enable camera</button>
+        <small>Permission is requested by your browser. Nothing is recorded.</small>
+      </div>
+      <div id="loading" class="placeholder hidden"><p>Loading model…</p></div>
+    </div>
+
+    <aside class="panel">
+      <div class="row">
+        <button id="stop" class="ghost" disabled>Stop</button>
+        <button id="mirror" class="ghost">Mirror: on</button>
+      </div>
+
+      <div class="readout">
+        <div class="label">Detected</div>
+        <div id="gesture" class="gesture">—</div>
+        <div class="bar-track"><div id="confbar" class="bar-fill"></div></div>
+        <div id="confidence" class="muted small">no hand</div>
+      </div>
+
+      <div class="scores">
+        <div class="label">Live scores</div>
+        <ul id="scorelist"></ul>
+      </div>
+
+      <div class="stats">
+        <div><span class="label">FPS</span><span id="fps">—</span></div>
+        <div><span class="label">Inference</span><span id="inference">—</span></div>
+        <div><span class="label">Hands</span><span id="hands">0</span></div>
+      </div>
+
+      <div class="log">
+        <div class="label">Event log</div>
+        <ul id="events"></ul>
+      </div>
+    </aside>
+  </section>
+
+  <section class="reference">
+    <h2>Recognised gestures</h2>
+    <div class="grid" id="gesture-grid"></div>
+  </section>
+
+  <section class="reference">
+    <h2>What the desktop app adds</h2>
+    <div class="cols">
+      <div>
+        <h3>Real input control</h3>
+        <p>Sends keystrokes, moves the cursor, clicks and scrolls through
+           pynput, ydotool, xdotool or PyAutoGUI — including Wayland.</p>
+      </div>
+      <div>
+        <h3>Motion gestures</h3>
+        <p>Swipes and circles judged on straightness, speed and path length,
+           so a wobble or a slow reposition never fires an action.</p>
+      </div>
+      <div>
+        <h3>Profiles</h3>
+        <p>Presentation, desktop, media and accessibility mappings in editable
+           YAML, switchable at runtime.</p>
+      </div>
+      <div>
+        <h3>Virtual mouse</h3>
+        <p>Point to move, pinch to click, pinch-hold to drag, two fingers to
+           scroll, two hands to zoom.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="bar">
+  <span class="muted small">
+    Runs entirely on-device via MediaPipe Tasks Vision. MIT licensed.
+  </span>
+</footer>
+
+<script type="module" src="demo.js"></script>
+</body>
+</html>
