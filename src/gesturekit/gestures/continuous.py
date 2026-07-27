@@ -47,9 +47,11 @@ class PointerRecognizer(Recognizer):
 
     name = "pointer"
 
-    def __init__(self, config: Optional[PointerConfig] = None, enabled: bool = True):
+    def __init__(self, config: Optional[PointerConfig] = None, enabled: bool = True,
+                 aspect: float = 1.0):
         self.config = config or PointerConfig()
         self.enabled = enabled
+        self.aspect = aspect
         self._filter = OneEuroFilter(min_cutoff=self.config.smoothing, beta=self.config.beta)
         self._pinch = Hysteresis(self.config.pinch_on, self.config.pinch_off, invert=True)
         self._pinch_start: Optional[float] = None
@@ -64,8 +66,15 @@ class PointerRecognizer(Recognizer):
         self._click_pending = False
 
     def _map(self, pt: np.ndarray) -> np.ndarray:
+        """Active-region coordinates -> 0..1 screen coordinates.
+
+        The incoming x is aspect-corrected (see ``geometry.correct_aspect``),
+        so it is divided back out before comparing against the region, which
+        is expressed in plain frame fractions.
+        """
         c = self.config
-        x = (float(pt[0]) - c.region_x0) / max(c.region_x1 - c.region_x0, 1e-6)
+        px = float(pt[0]) / self.aspect if abs(self.aspect - 1.0) > 1e-6 else float(pt[0])
+        x = (px - c.region_x0) / max(c.region_x1 - c.region_x0, 1e-6)
         y = (float(pt[1]) - c.region_y0) / max(c.region_y1 - c.region_y0, 1e-6)
         return np.array([np.clip(x, 0.0, 1.0), np.clip(y, 0.0, 1.0)], dtype=np.float32)
 

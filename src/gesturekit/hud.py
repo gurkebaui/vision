@@ -76,11 +76,15 @@ class HUD:
     """Renders landmarks, status panels and gesture feedback."""
 
     def __init__(self, theme: str = "dark", show_landmarks: bool = True,
-                 show_scores: bool = False, show_trail: bool = True):
+                 show_scores: bool = False, show_trail: bool = True,
+                 aspect: float = 1.0):
         self.colours = THEMES.get(theme, THEMES["dark"])
         self.show_landmarks = show_landmarks
         self.show_scores = show_scores
         self.show_trail = show_trail
+        #: Landmarks arrive aspect-corrected; undo that to draw them back onto
+        #: the video frame, or the skeleton will not line up with the hand.
+        self.aspect = aspect
         self.toast: Optional[tuple[str, float, str]] = None
         self._trail: deque = deque(maxlen=28)
         self._recent: deque = deque(maxlen=6)
@@ -130,9 +134,18 @@ class HUD:
         return frame
 
     # -- pieces ------------------------------------------------------------
+    def _to_pixels(self, xy: np.ndarray, w: int, h: int) -> np.ndarray:
+        """Aspect-corrected normalised coords -> pixel coords."""
+        out = np.asarray(xy, dtype=np.float32).reshape(-1, 2).copy()
+        if abs(self.aspect - 1.0) > 1e-6:
+            out[:, 0] /= self.aspect
+        out[:, 0] *= w
+        out[:, 1] *= h
+        return out.astype(np.int32)
+
     def _draw_hand(self, frame, hand: HandState, w: int, h: int) -> None:
         c = self.colours
-        pts = (hand.points[:, :2] * (w, h)).astype(np.int32)
+        pts = self._to_pixels(hand.points[:, :2], w, h)
 
         for a, b in geo.HAND_CONNECTIONS:
             cv2.line(frame, tuple(pts[a]), tuple(pts[b]), c["bone"], 2, LINE)
@@ -155,20 +168,21 @@ class HUD:
             cv2.line(frame, t, i, c["warn"], 1 + int(2 * strength), LINE)
 
         x0, y0, x1, y1 = geo.bounding_box(hand.points, pad=0.03)
-        p0 = (int(x0 * w), int(y0 * h))
-        p1 = (int(x1 * w), int(y1 * h))
+        (p0, p1) = [tuple(int(v) for v in pt)
+                    for pt in self._to_pixels(np.array([[x0, y0], [x1, y1]]), w, h)]
         cv2.rectangle(frame, p0, p1, c["dim"], 1, LINE)
         label = f"{hand.handedness.value[:1]} {hand.score:.0%}"
         text(frame, label, (p0[0], max(14, p0[1] - 6)), c["dim"], 0.42)
 
     def _draw_trail(self, frame, hand: HandState, w: int, h: int) -> None:
         self._trail.append((float(hand.center[0]), float(hand.center[1])))
-        pts = list(self._trail)
-        for i in range(1, len(pts)):
-            a = (int(pts[i - 1][0] * w), int(pts[i - 1][1] * h))
-            b = (int(pts[i][0] * w), int(pts[i][1] * h))
-            thickness = max(1, int(3 * i / len(pts)))
-            cv2.line(frame, a, b, self.colours["trail"], thickness, LINE)
+        if len(self._trail) < 2:
+            return
+        px = self._to_pixels(np.asarray(self._trail, dtype=np.float32), w, h)
+        for i in range(1, len(px)):
+            thickness = max(1, int(3 * i / len(px)))
+            cv2.line(frame, tuple(px[i - 1]), tuple(px[i]),
+                     self.colours["trail"], thickness, LINE)
 
     def _draw_status(self, frame, result: FrameResult, profile, backend, paused, w, h) -> None:
         c = self.colours

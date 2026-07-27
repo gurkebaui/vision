@@ -57,6 +57,9 @@ class GestureEngineConfig:
     enable_zoom: bool = False
     pointer: PointerConfig = field(default_factory=PointerConfig)
     scroll_sensitivity: float = 1.0
+    #: Frame aspect ratio, mirrored from TrackerConfig so the pointer can map
+    #: aspect-corrected landmarks back onto the screen.
+    aspect: float = 1.0
 
     # global
     cooldown: float = 0.45           # per-gesture repeat suppression
@@ -77,7 +80,8 @@ class GestureEngine:
         self._wave: dict[str, WaveRecognizer] = {}
 
         self._continuous = ContinuousRecognizer(
-            pointer=PointerRecognizer(cfg.pointer, enabled=cfg.enable_pointer),
+            pointer=PointerRecognizer(cfg.pointer, enabled=cfg.enable_pointer,
+                                      aspect=cfg.aspect),
             scroll=ScrollRecognizer(cfg.scroll_sensitivity, enabled=cfg.enable_scroll),
             zoom=ZoomRecognizer(enabled=cfg.enable_zoom),
         )

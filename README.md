@@ -35,7 +35,7 @@ layer anyway, so the accuracy and latency problems got fixed at the same time.
 | Gestures | 6 (2 unimplemented) | 15 shapes + swipes + circles + wave + pinch/drag/scroll/zoom |
 | Key mapping | hard-coded `if` chain | YAML profiles, hot-swappable |
 | Linux input | PyAutoGUI (X11 only) | pynput / ydotool (Wayland) / xdotool / PyAutoGUI |
-| Tests | none | 425 |
+| Tests | none | 512 |
 
 ### Concrete bugs that were fixed
 
@@ -58,6 +58,11 @@ layer anyway, so the accuracy and latency problems got fixed at the same time.
   well you performed them.
 - **The UI printed `?` boxes.** OpenCV's Hershey fonts cannot render emoji, and
   every label used them.
+- **Camera aspect ratio skewed all the geometry.** MediaPipe normalises x by
+  frame width and y by frame height, so on a 16:9 webcam every horizontal
+  measurement is stretched 1.78x. Uncorrected, a closed fist reads as a
+  thumbs-down. Coordinates are now squared up before any angle or distance is
+  computed.
 
 ---
 
@@ -227,8 +232,9 @@ camera thread ──► newest frame only (stale frames dropped)
               arming ──► cooldowns ──► action router ──► input backend
 ```
 
-**Why it is accurate.** Finger curl is computed from joint *angles*, so it
-works with the hand rotated, tilted or sideways. Every threshold is expressed
+**Why it is accurate.** Coordinates are corrected for the camera's aspect ratio
+before anything measures them. Finger curl is computed from joint *angles*, so
+it works with the hand rotated, tilted or sideways. Every threshold is expressed
 in palm widths, so it behaves identically at 40 cm and 3 m. Scores are smooth
 membership functions combined with a geometric mean, so an ambiguous pose comes
 out as *low confidence* rather than *confidently wrong*. Nothing fires until a
@@ -263,7 +269,7 @@ browsers forbid that — so use the Python app for actual control.
 
 ```bash
 pip install -e ".[dev,input]"
-pytest                 # 425 tests, no camera or model needed
+pytest                 # 512 tests, no camera or model needed
 ruff check src tests
 ```
 

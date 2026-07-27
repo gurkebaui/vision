@@ -39,6 +39,9 @@ class TrackerConfig:
     filter_min_cutoff: float = 1.2
     filter_beta: float = 0.06
     running_mode: str = "live_stream"  # live_stream | video
+    #: Frame width / height. MediaPipe normalises x by width and y by height,
+    #: so geometry is stretched horizontally until this is applied.
+    aspect: float = 1.0
 
 
 class TrackerError(RuntimeError):
@@ -191,6 +194,9 @@ class HandTracker:
             raw = geo.to_array(lms)
             if raw.shape[0] < 21:
                 continue
+            # Square up the coordinates before anything measures an angle or a
+            # distance, otherwise every threshold is aspect-dependent.
+            raw = geo.correct_aspect(raw, self.config.aspect)
 
             hand_label, score = Handedness.UNKNOWN, 0.0
             handedness = getattr(result, "handedness", None)

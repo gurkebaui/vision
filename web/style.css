@@ -140,6 +140,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .ghost { background: var(--panel-2); color: var(--text); border-color: var(--line); flex: 1; }
 .ghost:hover:not(:disabled) { background: #232b36; }
 
+.readout {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
 .gesture {
   font-size: 24px;
   font-weight: 600;

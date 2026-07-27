@@ -74,6 +74,27 @@ def to_array(landmarks: Iterable) -> np.ndarray:
     return np.array(seq, dtype=np.float32)
 
 
+def correct_aspect(pts: np.ndarray, aspect: float) -> np.ndarray:
+    """Undo the non-square scaling in MediaPipe's normalised coordinates.
+
+    MediaPipe divides x by the frame *width* and y by the frame *height*, so on
+    a 16:9 camera one unit of x is 1.78x longer than one unit of y.  Any angle
+    or distance computed on the raw values is therefore distorted: on a real
+    webcam a closed fist can read as a thumbs-down, and finger splay is
+    overstated by ~78%.
+
+    Rescaling x into the same physical units as y makes all downstream geometry
+    resolution- and aspect-independent.  Kept as a separate step so callers can
+    pass already-corrected points (and so tests can use isotropic hands).
+    """
+    if pts.shape[0] == 0 or abs(aspect - 1.0) < 1e-6:
+        return pts
+    out = pts.copy()
+    out[:, 0] *= aspect
+    out[:, 2] *= aspect      # z shares the x normalisation in MediaPipe
+    return out
+
+
 def palm_size(pts: np.ndarray) -> float:
     """Scale reference: mean wrist->MCP distance in XY.
 

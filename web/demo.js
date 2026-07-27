@@ -246,8 +246,7 @@ function stop() {
   document.getElementById("start2").addEventListener("click", start);
 }
 
-function toggleMirror() {
-  mirrored = !mirrored;
+function applyMirror() {
   const transform = mirrored ? "scaleX(-1)" : "none";
   ui.video.style.transform = transform;
   ui.overlay.style.transform = transform;
@@ -256,6 +255,8 @@ function toggleMirror() {
 
 ui.start.addEventListener("click", start);
 ui.stop.addEventListener("click", stop);
-ui.mirror.addEventListener("click", toggleMirror);
-toggleMirror();
-toggleMirror(); // apply the default (mirrored) state
+ui.mirror.addEventListener("click", () => {
+  mirrored = !mirrored;
+  applyMirror();
+});
+applyMirror();

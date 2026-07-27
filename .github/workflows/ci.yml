@@ -29,9 +29,12 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          # Headless OpenCV: CI runners have no display server.
-          pip install opencv-python-headless
           pip install -e ".[dev]"
+          # CI runners have no display server and no libGL, so swap the GUI
+          # build for the headless one. Must come *after* the editable install,
+          # otherwise pip resolves opencv-python back in over the top.
+          pip uninstall -y opencv-python opencv-contrib-python || true
+          pip install opencv-python-headless
 
       - name: Lint
         run: ruff check src tests

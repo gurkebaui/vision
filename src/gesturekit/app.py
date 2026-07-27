@@ -73,10 +73,19 @@ class GestureApp:
             progress=_progress,
         )
         log.info("Model: %s", model_path)
-        self.tracker = HandTracker(model_path, cfg.tracker)
         self.camera = Camera(cfg.camera).open()
         w, h = self.camera.resolution
-        log.info("Camera: %dx%d (index %d)", w, h, cfg.camera.index)
+        # Tell the tracker the real frame shape so it can undo MediaPipe's
+        # non-square normalisation. Without this, gesture geometry is skewed by
+        # the camera's aspect ratio (1.78x on a standard 16:9 webcam).
+        if w and h:
+            cfg.tracker.aspect = w / h
+            cfg.engine.aspect = cfg.tracker.aspect
+            self.engine = GestureEngine(cfg.engine)
+        self.tracker = HandTracker(model_path, cfg.tracker)
+        self.hud.aspect = cfg.tracker.aspect
+        log.info("Camera: %dx%d (index %d, aspect %.3f)", w, h, cfg.camera.index,
+                 cfg.tracker.aspect)
         log.info("Input backend: %s", self.backend.name)
         log.info("Profile: %s -- %d bindings", cfg.profile, len(self.router.bindings))
 
@@ -88,6 +97,10 @@ class GestureApp:
             log.error("Cannot load profile '%s': %s", name, exc)
             self.hud.notify(f"profile '{name}' failed", "bad")
             return
+
+        # A profile file has no idea what camera is attached, so carry the
+        # measured aspect across rather than falling back to the 1.0 default.
+        new_cfg.engine.aspect = self.config.engine.aspect
 
         self.config.profile = new_cfg.profile
         self.config.bindings = new_cfg.bindings
