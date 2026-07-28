@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gesturekit"
+version = "2.0.0"
+description = "Low-latency hand-gesture control for presentations and the desktop, built on OpenCV 5 and the MediaPipe Tasks API."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "gurkebaui" }]
+keywords = ["opencv", "mediapipe", "gesture", "hand-tracking", "presentation", "hci", "accessibility"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Video :: Capture",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+]
+
+# Core runtime. Deliberately small: everything else is optional.
+dependencies = [
+  "opencv-python>=4.8,<6",
+  "mediapipe>=0.10.9",
+  "numpy>=1.24",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+# Input backends. Install at least one, or GestureKit runs in dry-run mode.
+input = ["pynput>=1.7.6"]
+autogui = ["pyautogui>=0.9.54"]
+dev = [
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
+  "ruff>=0.4",
+]
+all = ["pynput>=1.7.6", "pyautogui>=0.9.54"]
+
+[project.scripts]
+gesturekit = "gesturekit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gurkebaui/vision"
+Repository = "https://github.com/gurkebaui/vision"
+Issues = "https://github.com/gurkebaui/vision/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gesturekit = ["profiles/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "camera: requires a real camera (skipped by default)",
+  "model: requires the downloaded MediaPipe model bundle",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+  "E501",    # line length is handled by the formatter
+  "B008",    # function calls in argument defaults (dataclass factories)
+  # `X | None` is not valid at runtime on Python 3.9 for evaluated
+  # annotations (dataclass fields, pydantic-style introspection), and 3.9 is
+  # still supported here. Optional[...] stays.
+  "UP045",
+  "UP007",
+  "UP006",
+  "UP035",
+  # contextlib.suppress allocates a context manager per call; these sit in the
+  # per-frame path or in cleanup code that must never raise.
+  "SIM105",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# dict(...) reads better than a brace literal for the keyword-style pose and
+# option tables used in the profiles and test fixtures.
+"tests/*" = ["C408"]
+"src/gesturekit/tracker.py" = ["C408"]

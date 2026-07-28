@@ -1,0 +1,76 @@
+# GestureKit -- desktop profile
+# Turns your hand into a mouse: point to move the cursor, pinch to click,
+# pinch-and-hold to drag, two fingers to scroll, two hands to zoom.
+
+name: desktop
+description: Virtual mouse, scrolling, zoom, media keys and window management.
+
+camera:
+  width: 1280
+  height: 720
+  fps: 30
+
+tracker:
+  num_hands: 2
+  min_tracking_confidence: 0.65
+
+engine:
+  require_arm: false
+  cooldown: 0.50
+  static_min_frames: 5      # stricter: a stray pose must not fire a hotkey
+  static_min_score: 0.66
+
+  enable_pointer: true
+  enable_scroll: true
+  enable_zoom: true
+  enable_swipes: true
+  enable_circles: false
+  enable_wave: true
+
+  pointer:
+    # Active region of the frame mapped to the whole screen. Shrink it to
+    # cover the screen with smaller hand movements.
+    region_x0: 0.20
+    region_y0: 0.16
+    region_x1: 0.80
+    region_y1: 0.76
+    smoothing: 1.0          # lower = smoother, higher = snappier
+    beta: 0.015
+    pinch_on: 0.32
+    pinch_off: 0.42
+    drag_hold: 0.28
+
+  scroll_sensitivity: 3.0
+
+ui:
+  show_scores: false
+  show_trail: true
+
+gestures:
+  # --- pointer (streaming, never rate-limited) -------------------------
+  cursor_move: { cursor: absolute, label: "Move cursor" }
+  click:       { click: left,      label: "Left click" }
+  drag_start:  { drag: start,      label: "Begin drag" }
+  drag_end:    { drag: end,        label: "End drag" }
+  scroll:      { scroll: { gain: 3 }, label: "Scroll" }
+
+  # --- window / workspace ---------------------------------------------
+  swipe_left:  { hotkey: [ctrl, alt, right], label: "Next workspace" }
+  swipe_right: { hotkey: [ctrl, alt, left],  label: "Previous workspace" }
+  swipe_up:    { hotkey: [super],            label: "Overview" }
+  swipe_down:  { hotkey: [super, d],         label: "Show desktop" }
+
+  # --- media -----------------------------------------------------------
+  thumbs_up:   { key: volumeup,   label: "Volume up",   repeat: 3 }
+  thumbs_down: { key: volumedown, label: "Volume down", repeat: 3 }
+  peace:       { key: playpause,  label: "Play / pause" }
+  rock:        { key: nexttrack,  label: "Next track" }
+
+  # --- app control ------------------------------------------------------
+  open_palm:   { hotkey: [alt, tab], label: "Switch window" }
+  closed_fist: { none: true,         label: "Idle (no action)" }
+  three:       { key: volumemute,    label: "Mute" }
+  wave:        { mode: presentation, label: "Switch to presentation mode" }
+
+  zoom_in:     { hotkey: [ctrl, "plus"],  label: "Zoom in" }
+  zoom_out:    { hotkey: [ctrl, "minus"], label: "Zoom out" }

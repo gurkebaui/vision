@@ -1,5 +1,11 @@
-opencv-python>=4.8.0
-mediapipe>=0.10.0
-pyautogui>=0.9.54
-numpy>=1.21.0
-Pillow>=9.0.0
+# Runtime dependencies. Prefer:  pip install -e ".[input]"
+# This file exists for pip-only workflows and mirrors pyproject.toml.
+
+opencv-python>=4.8,<6
+mediapipe>=0.10.9
+numpy>=1.24
+PyYAML>=6.0
+
+# Input backend. pynput covers X11, Windows and macOS.
+# On Wayland install ydotool (system package) instead; see the README.
+pynput>=1.7.6

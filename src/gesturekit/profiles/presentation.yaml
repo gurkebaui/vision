@@ -1,0 +1,63 @@
+# GestureKit -- presentation profile
+# Works with PowerPoint, LibreOffice Impress, Google Slides, Keynote and PDF
+# viewers, because it drives the shortcuts they all share.
+#
+# Tip: put the slide app in focus before gesturing. GestureKit sends
+# keystrokes to whatever window is focused -- it never steals focus itself.
+
+name: presentation
+description: Slide navigation, blackout, laser pointer and presenter tools.
+
+engine:
+  # Always-on: a swipe is deliberate enough on its own. Flip to true if you
+  # gesture a lot while talking and want an explicit arm step first.
+  require_arm: false
+  arm_gesture: point_up
+  arm_window: 3.0
+  cooldown: 0.60          # slides should not double-advance
+  static_min_frames: 4
+  static_min_score: 0.62
+  enable_swipes: true
+  enable_circles: true
+  enable_wave: true
+  enable_pointer: false
+  enable_scroll: false
+  enable_zoom: true
+  swipe:
+    min_distance: 1.15
+    min_speed: 2.2
+    refractory: 0.65
+
+ui:
+  show_scores: false
+
+gestures:
+  # --- navigation -----------------------------------------------------
+  swipe_left:   { key: right,  label: "Next slide" }      # hand sweeps left -> advance
+  swipe_right:  { key: left,   label: "Previous slide" }
+  swipe_up:     { key: home,   label: "First slide" }
+  swipe_down:   { key: end,    label: "Last slide" }
+
+  open_palm:    { key: space,  label: "Advance / play" }
+  peace:        { key: b,      label: "Blackout screen" }
+  thumbs_up:    { key: w,      label: "Whiteout screen" }
+  three:        { key: f5,     label: "Start slideshow" }
+  four:         { hotkey: [shift, f5], label: "Present from here" }
+
+  # --- pointer tools ---------------------------------------------------
+  point_up:     { hotkey: [ctrl, l], label: "Laser pointer" }
+  rock:         { hotkey: [ctrl, p], label: "Pen tool" }
+  call_me:      { hotkey: [ctrl, e], label: "Eraser" }
+  ok:           { hotkey: [ctrl, a], label: "Arrow / normal cursor" }
+
+  # --- session ---------------------------------------------------------
+  closed_fist:  { key: esc,    label: "End slideshow" }
+  wave:         { mode: desktop, label: "Switch to desktop mode" }
+
+  # --- zoom (needs two pinching hands) ---------------------------------
+  zoom_in:      { hotkey: [ctrl, "plus"],  label: "Zoom in" }
+  zoom_out:     { hotkey: [ctrl, "minus"], label: "Zoom out" }
+
+  # --- circles: jump around the deck -----------------------------------
+  circle_cw:    { key: pagedown, label: "Page down" }
+  circle_ccw:   { key: pageup,   label: "Page up" }

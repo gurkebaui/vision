@@ -1,217 +1,301 @@
-# 🤖 AI Gesture-Controlled PowerPoint Presentation
+# GestureKit
 
-A Python application that uses computer vision and machine learning to control PowerPoint presentations with hand gestures. Lift a finger and perform a gesture within 3 seconds to control your presentation naturally!
+Hand-gesture control for presentations and the desktop. Point at your screen to
+move the cursor, pinch to click, swipe to change slides — all processed locally
+on your machine.
 
-## ✨ Features
-
-- **Real-time hand tracking** using MediaPipe
-- **Intelligent gesture recognition** with confidence scoring
-- **3-second gesture window** - lift a finger, then perform gesture
-- **Multiple gesture support** for full presentation control
-- **Visual feedback** with confidence indicators
-- **Cross-platform compatibility** (Windows, macOS, Linux)
-- **Privacy-first** - all processing happens locally
-
-## 🎯 Supported Gestures
-
-| Gesture | Action | Description |
-|---------|--------|-------------|
-| ✋ **Open Palm** | Space | next |
-| ✊ **Closed Fist** | nothing | Exit presentation mode |
-| ☝️ **Point Up** | activating | do this before the other poses to activate tracking |
-| 👇 **Point Down** | not working | (will) Go to previous slide |
-| 👍 **Thumbs Up** | not included yet |  |
-| ✌️ **Middle Finger** | escape | Exit presentation mode |
-| 👈 **Swipe Left** | Previous Slide | Navigate to previous slide |
-| 👉 **Swipe Right** | yet to implement | Navigate to next slide |
-
-## 🚀 Quick Start
-
-### Method 1: Automatic Setup (Recommended)
+Built on **OpenCV** and the **MediaPipe Tasks API**, with a recognition
+pipeline designed around one goal: never fire an action you did not intend.
 
 ```bash
-# Run the setup script
-python setup_and_run.py
+pip install -e ".[input]"
+gesturekit doctor        # check the setup
+gesturekit run           # presentation mode
+gesturekit run -p desktop # virtual mouse mode
 ```
-
-The script will:
-1. Check system requirements
-2. Install missing packages
-3. Provide usage instructions
-4. Run the application
-
-### Method 2: Manual Installation
-
-1. **Install Python 3.7+** from [python.org](https://python.org)
-
-2. **Install required packages:**
-```bash
-pip install -r requirements.txt
-```
-
-3. **Run the application:**
-```bash
-python gesture_presentation_control.py
-```
-
-## 📋 Requirements
-
-### System Requirements
-- **Python 3.7 or higher**
-- **Webcam** (built-in or external)
-- **PowerPoint** (or other presentation software)
-- **Operating System**: Windows 10/11, macOS 10.15+, or Linux
-
-### Python Packages
-```
-opencv-python>=4.8.0
-mediapipe>=0.10.0
-pyautogui>=0.9.54
-numpy>=1.21.0
-Pillow>=9.0.0
-```
-
-## 🎮 How to Use
-
-### Setup
-1. **Open PowerPoint** with your presentation
-2. **Start presentation mode** (F5 or Shift+F5)
-3. **Run the gesture control app**:
-   ```bash
-   python gesture_presentation_control.py
-   ```
-
-### Using Gestures
-1. **Position your hand** in front of the camera
-2. **Lift a finger** to activate the 3-second gesture window
-3. **Perform a gesture** within 3 seconds
-4. **Watch PowerPoint respond** to your gesture!
-
-### Controls
-- **'q'**: Quit application
-- **'r'**: Reset gesture detection
-- **Ctrl+C**: Emergency quit
-
-## 🔧 Technical Details
-
-### How It Works
-1. **Camera Capture**: Real-time video from webcam (30+ FPS)
-2. **Hand Detection**: MediaPipe identifies 21 hand landmarks
-3. **Gesture Recognition**: AI analyzes finger positions and movements
-4. **Command Execution**: PyAutoGUI sends keystrokes to PowerPoint
-5. **Visual Feedback**: Real-time display of detection results
-
-### Architecture
-```
-Webcam → OpenCV → MediaPipe → Gesture Recognition → PyAutoGUI → PowerPoint
-```
-
-### Performance
-- **Processing Speed**: 30+ FPS
-- **Detection Accuracy**: 85-95%
-- **Response Time**: <100ms
-- **Gesture Window**: 3 seconds after finger lift
-
-## 📖 Usage Examples
-
-### Presenting a Slide Deck
-```bash
-# 1. Open PowerPoint and start presentation
-# 2. Run gesture control
-python gesture_presentation_control.py
-
-# 3. Use gestures:
-#    - Lift finger + Open Palm → Start presentation
-#    - Lift finger + Point Right → Next slide
-#    - Lift finger + Point Left → Previous slide
-#    - Lift finger + Closed Fist → End presentation
-```
-
-### Teaching or Training
-```bash
-# Perfect for educators who want to move freely
-# No need to hold a clicker or be near the computer
-# Natural gestures make presentations more engaging
-```
-
-## 🛠️ Troubleshooting
-
-### Camera Issues
-```bash
-# Check if camera is available
-python -c "import cv2; print(cv2.VideoCapture(0).isOpened())"
-
-# Try different camera index
-# Edit gesture_presentation_control.py and change:
-# self.cap = cv2.VideoCapture(1)  # or 2, 3, etc.
-```
-
-### Package Installation Issues
-```bash
-# Update pip first
-pip install --upgrade pip
-
-# Install packages individually if needed
-pip install opencv-python
-pip install mediapipe
-pip install pyautogui
-pip install numpy
-```
-
-### PowerPoint Not Responding
-1. **Make sure PowerPoint is the active window**
-2. **Try running as administrator** (Windows)
-3. **Check if PowerPoint is in presentation mode**
-4. **Verify PyAutoGUI can control your system**
-
-### Gesture Detection Issues
-1. **Ensure good lighting** on your hands
-2. **Position hand clearly** in camera view
-3. **Move slowly and deliberately** when performing gestures
-4. **Check the confidence scores** displayed on screen
-
-## 🎨 Customization
-
-### Adding New Gestures
-Edit the `detect_gesture()` method in `gesture_presentation_control.py`:
-
-```python
-# Add your custom gesture logic
-elif your_gesture_condition:
-    gesture = "custom_gesture"
-    confidence = 0.8
-```
-
-### Changing Sensitivity
-Modify these parameters in the code:
-- `min_detection_confidence`: Detection sensitivity (0.0-1.0)
-- `gesture_cooldown`: Time between gestures (seconds)
-- `bufferSize`: Number of frames for gesture stability
-
-## 🔐 Privacy & Security
-
-- **No data collection** - all processing happens locally
-- **No internet required** - works completely offline
-- **No cloud services** - your gestures stay on your computer
-- **Open source** - transparent and auditable code
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-## 📞 Support
-
-If you encounter issues:
-1. Check the troubleshooting section above
-2. Open an issue in the repository
-3. Include your system specifications and error messages
 
 ---
 
-**Enjoy hands-free presentation control!** 🎉
+## Why this exists in this shape
 
-*Made with ❤️ using Python, OpenCV, MediaPipe, and PyAutoGUI*
+Version 1 of this project used `mediapipe.solutions.hands`. That API **no
+longer exists** — MediaPipe 1.0 removed it, so the old script now fails at
+import with `ModuleNotFoundError`. Fixing that meant rebuilding the recognition
+layer anyway, so the accuracy and latency problems got fixed at the same time.
+
+| | v1 | v2 |
+|---|---|---|
+| MediaPipe API | `mp.solutions` (removed) | `mediapipe.tasks` (current) |
+| Inference | blocking, in the capture loop | async LIVE_STREAM, own thread |
+| Landmark smoothing | none | One Euro filter |
+| Finger detection | `tip.y < pip.y` — breaks on a rotated hand | joint-angle curl, rotation invariant |
+| Thresholds | pixel constants | palm-relative, distance invariant |
+| Gesture decision | one frame over a threshold | N-frame vote + margin + dwell |
+| Swipe detection | 2-frame delta > 0.05 | trajectory, straightness, speed, refractory |
+| Gestures | 6 (2 unimplemented) | 15 shapes + swipes + circles + wave + pinch/drag/scroll/zoom |
+| Key mapping | hard-coded `if` chain | YAML profiles, hot-swappable |
+| Linux input | PyAutoGUI (X11 only) | pynput / ydotool (Wayland) / xdotool / PyAutoGUI |
+| Tests | none | 512 |
+
+### Concrete bugs that were fixed
+
+- **The 3-second arming window never worked.** `self.finger_lift_time` was
+  initialised to the integer `1`, so the first expiry check compared against
+  1970. Arming also required a fist in the buffer *and* only ever triggered on
+  `pointing_up`, contradicting its own instructions.
+- **Swipes fired on noise.** A single-frame centroid delta over `0.05` counted
+  as a swipe. Landmark jitter alone clears that.
+- **Curling your fingers faked a swipe.** The "hand centre" averaged all 21
+  landmarks, so closing your hand moved it far enough to trigger.
+- **Peace sign was miscoded.** The branch checked `extended_count == 1 and
+  'middle' in fingers` — that is one finger, not two, so a real peace sign
+  never matched it.
+- **The thumb was disabled.** Thumb detection was commented out, yet
+  `thumbs_up` still tested for `'thumb' in extended_fingers` — permanently
+  unreachable.
+- **Confidences were fictional.** Hard-coded values like `0.25` and `0.45` sat
+  below the `0.7` gate, so several gestures could never fire regardless of how
+  well you performed them.
+- **The UI printed `?` boxes.** OpenCV's Hershey fonts cannot render emoji, and
+  every label used them.
+- **Camera aspect ratio skewed all the geometry.** MediaPipe normalises x by
+  frame width and y by frame height, so on a 16:9 webcam every horizontal
+  measurement is stretched 1.78x. Uncorrected, a closed fist reads as a
+  thumbs-down. Coordinates are now squared up before any angle or distance is
+  computed.
+
+---
+
+## Install
+
+Requires Python 3.9+ and a webcam.
+
+```bash
+git clone https://github.com/gurkebaui/vision
+cd vision
+pip install -e ".[input]"
+```
+
+The MediaPipe model (~7 MB) downloads automatically on first run and is cached
+in `~/.cache/gesturekit`. To pre-fetch it, or for an offline machine:
+
+```bash
+gesturekit download
+# offline: copy hand_landmarker.task there yourself, or set
+# GESTUREKIT_MODEL_DIR=/path/to/models
+```
+
+### Linux notes
+
+| Session | Backend | Setup |
+|---|---|---|
+| X11 | `pynput` | works out of the box |
+| Wayland | `ydotool` | `sudo apt install ydotool`, then run `ydotoold` |
+
+Wayland deliberately blocks applications from injecting input, so X11-based
+tools silently do nothing there. `gesturekit doctor` detects this and tells you.
+
+---
+
+## Usage
+
+```bash
+gesturekit run                    # presentation profile
+gesturekit run -p desktop         # virtual mouse
+gesturekit run -p media           # video players
+gesturekit run -p accessibility   # forgiving thresholds
+
+gesturekit run --dry-run          # log gestures, press nothing — try this first
+gesturekit run --scores           # live confidence bars, for tuning
+gesturekit run --sensitivity 1.5  # one knob: higher = more eager
+gesturekit run --arm              # require an arm gesture before commands fire
+
+gesturekit profiles               # list profiles
+gesturekit bindings -p desktop    # what each gesture does
+gesturekit devices                # list cameras
+gesturekit doctor                 # diagnose problems
+gesturekit bench                  # measure throughput on your machine
+```
+
+### While it is running
+
+| Key | Action |
+|---|---|
+| `q` / `Esc` | quit |
+| `space` | pause detection |
+| `p` | next profile |
+| `h` | binding cheat sheet |
+| `s` | toggle confidence bars |
+| `l` / `t` | toggle landmarks / motion trail |
+| `d` | disable actions (keep detecting) |
+| `r` | reset the tracker |
+
+---
+
+## Gestures
+
+**Shapes** — open palm, closed fist, point up/down/left/right, peace, thumbs
+up/down, pinch, OK, rock, call me, three, four.
+
+**Motion** — swipe left/right/up/down, circle clockwise/counter-clockwise, wave.
+
+**Continuous** — cursor move, click, drag, two-finger scroll, two-hand zoom.
+
+### Presentation profile
+
+| Gesture | Action |
+|---|---|
+| Swipe left / right | Next / previous slide |
+| Open palm | Advance |
+| Peace | Blackout screen (`B`) |
+| Thumbs up | Whiteout screen (`W`) |
+| Point up | Laser pointer |
+| Rock | Pen tool |
+| Three / Four | Start slideshow / present from here |
+| Closed fist | End slideshow |
+| Wave | Switch to desktop mode |
+
+### Desktop profile
+
+| Gesture | Action |
+|---|---|
+| Point | Move cursor |
+| Pinch | Click |
+| Pinch and hold | Drag |
+| Two fingers | Scroll |
+| Two pinching hands | Zoom |
+| Swipe left / right | Switch workspace |
+| Thumbs up / down | Volume |
+| Open palm | Alt-Tab |
+
+Run `gesturekit bindings -p <profile>` for the full list.
+
+---
+
+## Configuration
+
+```bash
+gesturekit init     # writes ~/.config/gesturekit/config.yaml
+```
+
+Profiles are YAML and can extend each other. Drop your own in
+`~/.config/gesturekit/profiles/`:
+
+```yaml
+name: my-setup
+extends: presentation
+description: My shortcuts
+
+engine:
+  cooldown: 0.8           # slower repeats
+  static_min_frames: 6    # longer dwell before a gesture counts
+
+gestures:
+  peace:      { hotkey: [ctrl, shift, b], label: "My shortcut" }
+  thumbs_up:  { command: "notify-send 'nice'" }
+  closed_fist: null       # unbind
+```
+
+Action types: `key`, `hotkey`, `text`, `click`, `scroll`, `cursor`, `drag`,
+`mode` (switch profile), `command` (run a program), `null` (unbind).
+
+### Tuning
+
+| Symptom | Fix |
+|---|---|
+| Gestures fire accidentally | `--sensitivity 0.7`, or raise `static_min_frames` |
+| Gestures need holding too long | `--sensitivity 1.4`, or lower `static_min_frames` |
+| Swipes are missed | lower `engine.swipe.min_distance` / `min_speed` |
+| Swipes fire while repositioning | raise `min_speed` and `min_straightness` |
+| Cursor is jittery | lower `engine.pointer.smoothing` |
+| Cursor lags | raise `engine.pointer.beta` |
+
+---
+
+## How it works
+
+```
+camera thread ──► newest frame only (stale frames dropped)
+                       │
+                       ▼
+          MediaPipe Tasks, LIVE_STREAM mode  ──► own thread, non-blocking
+                       │
+                       ▼
+          One Euro filter ──► palm-relative geometry (curl, pinch, velocity)
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+    static rules   trajectory     continuous
+    + stabiliser    analysis      state machines
+        └──────────────┼──────────────┘
+                       ▼
+              arming ──► cooldowns ──► action router ──► input backend
+```
+
+**Why it is accurate.** Coordinates are corrected for the camera's aspect ratio
+before anything measures them. Finger curl is computed from joint *angles*, so
+it works with the hand rotated, tilted or sideways. Every threshold is expressed
+in palm widths, so it behaves identically at 40 cm and 3 m. Scores are smooth
+membership functions combined with a geometric mean, so an ambiguous pose comes
+out as *low confidence* rather than *confidently wrong*. Nothing fires until a
+gesture wins several consecutive frames by a clear margin.
+
+**Why it is fast.** Capture, inference and rendering overlap instead of running
+in series. Landmarks live in one `(21,3)` NumPy array. HUD panels blend only
+their own rectangle rather than copying the whole frame.
+
+Measured on the CPU side (excluding the neural network): geometry 0.14 ms,
+all 15 gesture rules 0.52 ms, full engine 0.87 ms, HUD at 720p 1.37 ms —
+about 2.9 ms per frame total. Run `gesturekit bench` for your own numbers.
+
+---
+
+## Browser demo
+
+`web/` is a self-contained page that runs the **same recognition logic**
+(ported to JS and verified against the Python implementation by
+`tests/test_web_parity.py`) using MediaPipe's web build.
+
+```bash
+python -m http.server -d web 8000   # then open http://localhost:8000
+```
+
+It shows what the recogniser detects. It cannot control your computer —
+browsers forbid that — so use the Python app for actual control.
+
+---
+
+## Development
+
+```bash
+pip install -e ".[dev,input]"
+pytest                 # 512 tests, no camera or model needed
+ruff check src tests
+```
+
+The test suite builds anatomically plausible synthetic hands
+(`tests/synth.py`), so the whole pipeline — geometry, recognisers, engine,
+routing, the app loop — is verified in CI on a machine with no webcam.
+
+```
+src/gesturekit/
+  geometry.py      landmark maths (pure NumPy)
+  filters.py       One Euro filter, hysteresis
+  tracker.py       MediaPipe Tasks wrapper
+  camera.py        threaded capture
+  gestures/        static / dynamic / continuous recognisers + engine
+  actions/         input backends + action router
+  profiles/        YAML gesture maps
+  hud.py           overlay rendering
+  app.py           main loop
+  cli.py           command line
+```
+
+## Privacy
+
+Everything runs locally. No network access is used after the one-time model
+download, nothing is recorded, and nothing is uploaded.
+
+## License
+
+MIT
