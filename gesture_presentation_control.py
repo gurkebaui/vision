@@ -1,483 +1,323 @@
 #!/usr/bin/env python3
 """
-AI Gesture-Controlled PowerPoint Presentation System
-Uses OpenCV, MediaPipe, and PyAutoGUI for real hand gesture recognition
+Vision Control v2 — Long-Range, CPU-Optimized Hand Gesture Control System
+Controls PowerPoint, Keynote, Google Slides, System Media/Volume, and Air Mouse
+from 0.4m up to 5m+ away on standard laptops without a GPU.
+
+Usage:
+  python gesture_presentation_control.py                 # Native Desktop HUD + OS Control
+  python gesture_presentation_control.py --studio        # Launch Web Control Studio + OS Bridge
+  python gesture_presentation_control.py --preset ultra_light --profile media
+  python gesture_presentation_control.py --benchmark     # Run CPU latency & FPS benchmark
 """
 
-import cv2
-import mediapipe as mp
-import numpy as np
-import pyautogui
-import time
-import threading
-from collections import deque
-from datetime import datetime
+from __future__ import annotations
+
+import argparse
 import sys
-import os
+import time
+import webbrowser
+from typing import Optional
+
+import cv2
+import numpy as np
+
+from vision_control import __version__
+from vision_control.actions import OSActionController
+from vision_control.camera import ThreadedCamera
+from vision_control.config import PERFORMANCE_PRESETS, PROFILE_ORDER, SystemConfig
+from vision_control.gestures import ScaleInvariantGestureEngine
+from vision_control.hud import ModernHUDRenderer
+from vision_control.tracker import LongRangeHandTracker
+
 
 class GesturePresentationController:
-    def __init__(self):
-        # Initialize MediaPipe Hands
-        self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.2,
-            min_tracking_confidence=0.1
-        )
-        self.mp_draw = mp.solutions.drawing_utils
-        
-        # Gesture detection variables
-        self.gesture_buffer = deque(maxlen=5)
-        self.previous_landmarks = None
-        self.last_gesture_time = 0
-        self.gesture_cooldown = 1.0  # 1 second cooldown between gestures
-        
-        # Timing variables for your 3-second requirement
-        self.finger_lift_time = 1
-        self.finger_lift_detected = False
-        self.gesture_window = 3.0  # 3 seconds to perform gesture after finger lift
-        
-        # Camera and display
-        self.cap = None
-        self.display_width = 1280
-        self.display_height = 720
-        
-        # Statistics
-        self.detection_stats = {
-            'total_frames': 0,
-            'gestures_detected': 0,
-            'start_time': time.time()
+    """
+    Main desktop runtime combining ThreadedCamera, LongRangeHandTracker,
+    ScaleInvariantGestureEngine, OSActionController, and ModernHUDRenderer.
+    """
+
+    def __init__(self, config: Optional[SystemConfig] = None) -> None:
+        self.config = config or SystemConfig.load()
+        self.tracker = LongRangeHandTracker(self.config)
+        self.gesture_engine = ScaleInvariantGestureEngine(self.config)
+        self.actions = OSActionController(self.config)
+        self.hud = ModernHUDRenderer(self.config)
+        self.camera: Optional[ThreadedCamera] = None
+
+        self.stats = {
+            "total_frames": 0,
+            "gestures_triggered": 0,
+            "start_time": time.perf_counter(),
         }
-        
-        # Initialize PyAutoGUI
-        pyautogui.FAILSAFE = True
-        pyautogui.PAUSE = 0.1
-        
-        print("🤖 AI Gesture Presentation Control initialized!")
-        print("==============================================")
-        print("Gestures:")
-        print("  ✋ Open Palm     - Play/Pause presentation")
-        print("  ✊ Closed Fist   - Stop presentation")
-        print("  ☝️ Point Up       - Next slide")
-        print("  👇 Point Down     - Previous slide")
-        print("  👍 Thumbs Up      - Zoom in")
-        print("  ✌️ Peace Sign      - Toggle pointer mode")
-        print("  👈 Swipe Left     - Previous slide")
-        print("  👉 Swipe Right    - Next slide")
-        print("\n📸 Looking for camera...")
-        
-    def start_camera(self):
-        """Initialize camera capture"""
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            print("❌ Error: Cannot access camera!")
+
+    def start_camera(self) -> bool:
+        preset = self.config.get_preset()
+        self.camera = ThreadedCamera(
+            camera_index=self.config.camera_index,
+            width=preset.capture_width,
+            height=preset.capture_height,
+            fps=preset.target_fps,
+            mirror=self.config.mirror_camera,
+        )
+        ok = self.camera.start()
+        if not ok:
+            print(
+                f"❌ Cannot open camera index {self.config.camera_index}. "
+                "Try --camera 1 or launch Web Studio with --studio."
+            )
             return False
-            
-        # Set camera properties
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.display_width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.display_height)
-        self.cap.set(cv2.CAP_PROP_FPS, 60)
-        
-        print("✅ Camera initialized successfully!")
+        print(
+            f"✅ Camera active at {self.camera.actual_width}x{self.camera.actual_height} "
+            f"(Preset: {preset.label})"
+        )
         return True
-    
-    def detect_fingers_extended(self, landmarks):
-        """Count extended fingers using landmark positions"""
-        extended_count = 0
-        extended_fingers = []
-        
-        # Thumb (special case)
-        """thumb_tip = landmarks[4]
-        thumb_ip = landmarks[3]
-        thumb_mcp = landmarks[2]
 
-        if thumb_tip.x > thumb_ip.x and thumb_ip.x > thumb_mcp.x:
-            extended_count += 1
-            extended_fingers.append('thumb')"""
-        
-        # Other fingers
-        finger_tips = [8, 12, 16, 20]  # Index, Middle, Ring, Pinky tips
-        finger_pips = [7, 11, 15, 19]  # Finger joints
-        finger_names = ['index', 'middle', 'ring', 'pinky']
-        
-        for i, (tip, pip, name) in enumerate(zip(finger_tips, finger_pips, finger_names)):
-            if landmarks[tip].y < landmarks[pip].y - 0.02:  # Finger is extended
-                extended_count += 1
-                extended_fingers.append(name)
-        
-        return extended_count, extended_fingers
-    
-    def calculate_hand_center(self, landmarks):
-        """Calculate center of hand from landmarks"""
-        x_coords = [lm.x for lm in landmarks]
-        y_coords = [lm.y for lm in landmarks]
-        
-        center_x = sum(x_coords) / len(x_coords)
-        center_y = sum(y_coords) / len(y_coords)
-        
-        return center_x, center_y
-    
-    def detect_gesture(self, landmarks):
-        """Main gesture recognition logic"""
-        current_time = time.time()
-        
-        # Count extended fingers
-        extended_count, extended_fingers = self.detect_fingers_extended(landmarks)
-        
-        # Get hand center for movement detection
-        center_x, center_y = self.calculate_hand_center(landmarks)
-        
-        gesture = None
-        confidence = 0.0
-        
-        # Open Palm (all fingers extended)
-        if extended_count >= 4:
-            gesture = "open_palm"
-            confidence = 0.9
-        
-        # Closed Fist (no fingers extended)
-        elif extended_count == 0:
-            gesture = "closed_fist"
-            confidence = 0.25
-        
-        # Pointing Up (only index finger extended)
-        elif extended_count == 1 and 'index' in extended_fingers:
-            gesture = "pointing_up"
-            confidence = 0.45
-        
-        # Thumbs Up (only thumb extended)
-        elif extended_count == 1 and 'thumb' in extended_fingers:
-            gesture = "thumbs_up"
-            confidence = 0.8
+    def run(self) -> int:
+        print(f"🚀 Vision Gesture Control v{__version__}")
+        print("=" * 56)
+        print(f"  Profile     : {self.config.get_active_profile_data()['name']}")
+        print(f"  CPU Preset  : {self.config.get_preset().label}")
+        print(f"  Activation  : {self.config.activation_mode.upper()}")
+        print(f"  Smart Zoom  : {'ON (0.4m - 5.0m+ Range)' if self.config.smart_zoom_enabled else 'OFF'}")
+        print("=" * 56)
 
-        elif extended_count == 1 and 'pinky' in extended_fingers:
-            gesture = "pinky_up"
-            confidence = 0.45
-        
-        # Peace Sign (index and middle fingers extended)
-        elif extended_count == 1 and  'middle' in extended_fingers:
-            gesture = "peace_sign"
-            confidence = 0.85
-        
-        # Swipe detection based on movement
-        if self.previous_landmarks is not None:
-            prev_center_x, prev_center_y = self.calculate_hand_center(self.previous_landmarks)
-            
-            delta_x = center_x - prev_center_x
-            delta_y = center_y - prev_center_y
-            
-            # Detect horizontal swipes
-            if abs(delta_x) > 0.05 and abs(delta_y) < 0.03:
-                if delta_x > 0:
-                    gesture = "swipe_right"
-                    confidence = min(0.9, abs(delta_x) * 10)
-                else:
-                    gesture = "swipe_left"
-                    confidence = min(0.9, abs(delta_x) * 10)
-            
-            # Detect vertical pointing
-            elif abs(delta_y) > 0.05 and extended_count == 1:
-                if delta_y > 0:
-                    gesture = "pointing_down"
-                    confidence = min(0.85, abs(delta_y) * 8)
-        
-        # Store current landmarks for next frame
-        self.previous_landmarks = landmarks
-        
-        return gesture, confidence, extended_count
-    
-    def execute_presentation_command(self, gesture):
-        """Execute PowerPoint control commands"""
-        current_time = time.time()
-        
-        # Check cooldown
-        if current_time - self.last_gesture_time < self.gesture_cooldown:
-            return False
-        
-        command_executed = False
-        command_name = ""
-        
-        if gesture == "open_palm":
-            pyautogui.press('space')
-            command_name = "Play/Pause"
-            command_executed = True
-        
-        elif gesture == "closed_fist":
-            pyautogui.press('f')
-            command_name = "Stop Presentation"
-            command_executed = True
-        
-        elif gesture == "pointing_up" or gesture == "swipe_right":
-            #pyautogui.press('right')
-            command_name = "Next Slide"
-            command_executed = True
-        
-        elif gesture == "pointing_down" or gesture == "swipe_left":
-            pyautogui.press('left')
-            command_name = "Previous Slide"
-            command_executed = True
-        
-        elif gesture == "thumbs_up":
-            #pyautogui.hotkey('ctrl', '+')
-            command_name = "Zoom In"
-            command_executed = True
-        
-        elif gesture == "peace_sign":
-            pyautogui.hotkey('escape')
-            command_name = "Toggle Pointer"
-            command_executed = True
-        
-        if command_executed:
-            self.last_gesture_time = current_time
-            self.detection_stats['gestures_detected'] += 1
-            print(f"🎯 {command_name} - {datetime.now().strftime('%H:%M:%S')}")
-        
-        return command_executed
-    
-    def check_finger_lift_trigger(self, extended_count, gesture ):
-        """Check for finger lift to start 3-second gesture window"""
-        current_time = time.time()
+        if not self.start_camera() or self.camera is None:
+            return 1
 
-        
-        # Detect finger lift (from closed fist to any gesture)
-        if not self.finger_lift_detected and extended_count > 0 and gesture == "pointing_up" :
-            # Check if we had a closed fist recently
-            recent_gestures = [g for g in self.gesture_buffer if g['extended_count'] == 0]
-            if recent_gestures:
-                self.finger_lift_detected = True
-                self.finger_lift_time = current_time
-                print(f"👆 Finger lift detected! You have 3 seconds to perform a gesture...")
-                return True
-        
-        # Reset if 3-second window expires
-        if self.finger_lift_detected and (current_time - self.finger_lift_time) > self.gesture_window:
-            self.finger_lift_detected = False
-            print("⏰ Gesture window expired. Lift finger again to start new window.")
-        
-        return self.finger_lift_detected
-    
-    def draw_gesture_info(self, frame, gesture, confidence, extended_count):
-        """Draw gesture information on frame"""
-        h, w = frame.shape[:2]
-        
-        # Background overlay
-        overlay = frame.copy()
-        cv2.rectangle(overlay, (10, 10), (400, 150), (30, 30, 30), -1)
-        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
-        
-        # Gesture information
-        y_offset = 35
-        
-        # Title
-        cv2.putText(frame, "🤖 AI Gesture Control", (20, y_offset), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 136), 2)
-        y_offset += 25
-        
-        # Current gesture
-        gesture_text = f"Gesture: {gesture or 'None'}"
-        cv2.putText(frame, gesture_text, (20, y_offset), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        y_offset += 20
-        
-        # Confidence
-        confidence_text = f"Confidence: {confidence:.2f}"
-        cv2.putText(frame, confidence_text, (20, y_offset), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        y_offset += 20
-        
-        # Extended fingers
-        fingers_text = f"Extended Fingers: {extended_count}"
-        cv2.putText(frame, fingers_text, (20, y_offset), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        y_offset += 20
-        
-        # 3-second window status
-        window_text = "3s Window: " + ("ACTIVE" if self.finger_lift_detected else "WAITING")
-        window_color = (0, 255, 0) if self.finger_lift_detected else (255, 255, 255)
-        cv2.putText(frame, window_text, (20, y_offset), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, window_color, 1)
-        
-        # Instructions
-        instructions = [
-            "Lift a finger and perform gesture within 3 seconds",
-            "✋ Open Palm: Play/Pause | ✊ Fist: Stop",
-            "☝️ Point Up: Next | 👇 Point Down: Previous",
-            "👍 Thumbs Up: Zoom | ✌️ Peace: Pointer",
-            "Press 'q' to quit | 'r' to reset"
-        ]
-        
-        y_start = h - 120
-        for i, instruction in enumerate(instructions):
-            cv2.putText(frame, instruction, (10, y_start + i * 20), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
-    
-    def draw_statistics(self, frame):
-        """Draw detection statistics"""
-        h, w = frame.shape[:2]
-        
-        # Statistics overlay
-        overlay = frame.copy()
-        cv2.rectangle(overlay, (w - 250, 10), (w - 10, 120), (30, 30, 30), -1)
-        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
-        
-        # Calculate statistics
-        elapsed_time = time.time() - self.detection_stats['start_time']
-        fps = self.detection_stats['total_frames'] / elapsed_time if elapsed_time > 0 else 0
-        
-        stats = [
-            f"FPS: {fps:.1f}",
-            f"Frames: {self.detection_stats['total_frames']}",
-            f"Gestures: {self.detection_stats['gestures_detected']}",
-            f"Runtime: {elapsed_time:.0f}s"
-        ]
-        
-        y_offset = 35
-        for stat in stats:
-            cv2.putText(frame, stat, (w - 240, y_offset), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            y_offset += 20
-    
-    def run(self):
-        """Main application loop"""
-        if not self.start_camera():
-            return
-        
-        print("\n🚀 Starting gesture detection...")
-        print("📊 Statistics will appear in the top-right corner")
-        print("❓ Instructions are displayed on the left side")
-        print("\n⚠️  Make sure PowerPoint is open and in presentation mode!")
-        print("\n🔄 Looking for finger lift to trigger 3-second gesture window...")
-        
+        win_name = "Vision Control v2 — Long-Range Gesture HUD"
+        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+
+        last_frame_id = 0
+        ema_fps = 30.0
+        prev_loop_t = time.perf_counter()
+
         try:
             while True:
-                ret, frame = self.cap.read()
-                if not ret:
-                    print("❌ Error: Cannot read frame from camera")
-                    break
-                
-                # Flip frame horizontally for mirror effect
-                frame = cv2.flip(frame, 1)
-                
-                # Convert BGR to RGB
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                # Process frame with MediaPipe
-                results = self.hands.process(rgb_frame)
-                
-                gesture = None
-                confidence = 0.0
-                extended_count = 0
-                
-                if results.multi_hand_landmarks:
-                    # Use the first detected hand
-                    hand_landmarks = results.multi_hand_landmarks[0]
-                    
-                    # Convert landmarks to proper format
-                    landmarks = []
-                    for lm in hand_landmarks.landmark:
-                        landmarks.append(lm)
-                    
-                    # Detect gesture
-                    gesture, confidence, extended_count = self.detect_gesture(landmarks)
-                    
-                    # Add to gesture buffer
-                    self.gesture_buffer.append({
-                        'gesture': gesture,
-                        'confidence': confidence,
-                        'extended_count': extended_count,
-                        'timestamp': time.time()
-                    })
-                    
-                    # Check for finger lift trigger
-                    finger_lift_active = self.check_finger_lift_trigger(extended_count, gesture)
-                    
-                    # Execute command if gesture detected and window is active
-                    if gesture and finger_lift_active and confidence > 0.7:
-                        self.execute_presentation_command(gesture)
-                    
-                    # Draw hand landmarks
-                    self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
-                
-                # Update statistics
-                self.detection_stats['total_frames'] += 1
-                
-                # Draw UI elements
-                self.draw_gesture_info(frame, gesture, confidence, extended_count)
-                self.draw_statistics(frame)
-                
-                # Display frame
-                cv2.imshow('AI Gesture Presentation Control', frame)
-                
-                # Handle key presses
+                is_new, frame, frame_id, frame_ts = self.camera.read_latest(last_frame_id)
+                if not is_new or frame is None:
+                    key = cv2.waitKey(2) & 0xFF
+                    if not self._handle_key(key):
+                        break
+                    continue
+
+                last_frame_id = frame_id
+                work_frame = frame.copy()
+                fh, fw = work_frame.shape[:2]
+                aspect = float(fw) / float(max(1, fh))
+
+                # 1. Long-Range 3-Tier Tracking
+                track_res = self.tracker.process_frame(work_frame, timestamp=frame_ts)
+
+                # 2. Scale-Invariant Biomechanical Gesture & Swipe Evaluation
+                eval_res = self.gesture_engine.update(
+                    track_res.landmarks if track_res.detected else None,
+                    now=frame_ts,
+                    aspect_ratio=aspect,
+                )
+
+                # 3. Continuous 1-Euro Air Mouse / Laser Pointer Cursor
+                self.actions.update_cursor(eval_res.cursor_xy, eval_res.is_pinching)
+
+                # 4. Triggered Command Execution
+                if eval_res.triggered_action:
+                    evt = self.actions.execute(
+                        eval_res.triggered_action,
+                        gesture=eval_res.triggered_gesture or "gesture",
+                    )
+                    if evt is not None:
+                        self.stats["gestures_triggered"] += 1
+                        self.hud.trigger_toast(f"{eval_res.gesture_icon}  {evt['label']}")
+                        print(
+                            f"[{evt['time_str']}] {evt['label']} "
+                            f"({eval_res.gesture_name}, ~{track_res.estimated_distance_m:.1f}m)"
+                        )
+
+                # 5. Telemetry & Fast Sub-ROI HUD Render
+                now_t = time.perf_counter()
+                dt = max(1e-4, now_t - prev_loop_t)
+                prev_loop_t = now_t
+                ema_fps = 0.88 * ema_fps + 0.12 * min(120.0, 1.0 / dt)
+                self.stats["total_frames"] += 1
+
+                display_frame = self.hud.render(work_frame, track_res, eval_res, ema_fps)
+                cv2.imshow(win_name, display_frame)
+
                 key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    print("\n👋 Quitting application...")
+                if not self._handle_key(key):
                     break
-                elif key == ord('r'):
-                    print("\n🔄 Resetting gesture detection...")
-                    self.finger_lift_detected = False
-                    self.gesture_buffer.clear()
-                    self.previous_landmarks = None
-        
+
         except KeyboardInterrupt:
-            print("\n\n👋 Application interrupted by user")
-        
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-        
+            print("\n👋 Interrupted by user.")
         finally:
             self.cleanup()
-    
-    def cleanup(self):
-        """Clean up resources"""
-        if self.cap:
-            self.cap.release()
-        cv2.destroyAllWindows()
-        self.hands.close()
-        
-        print("\n📊 Final Statistics:")
-        print(f"   Total Frames: {self.detection_stats['total_frames']}")
-        print(f"   Gestures Detected: {self.detection_stats['gestures_detected']}")
-        print(f"   Runtime: {time.time() - self.detection_stats['start_time']:.1f} seconds")
-        
-        if self.detection_stats['total_frames'] > 0:
-            gesture_rate = (self.detection_stats['gestures_detected'] / self.detection_stats['total_frames']) * 100
-            print(f"   Gesture Detection Rate: {gesture_rate:.2f}%")
-        
-        print("\n✅ Application closed successfully")
+        return 0
 
-def main():
-    """Main function"""
-    print("🚀 AI Gesture-Controlled PowerPoint Presentation")
-    print("===============================================")
-    print("A Python application that uses hand gestures to control PowerPoint presentations.")
-    print("\nRequirements:")
-    print("  - Webcam")
-    print("  - PowerPoint open and in presentation mode")
-    print("  - Python packages: opencv-python, mediapipe, pyautogui, numpy")
-    print("\nHow it works:")
-    print("  1. Lift a finger to start 3-second gesture window")
-    print("  2. Perform gesture within 3 seconds")
-    print("  3. System automatically controls PowerPoint")
-    print("\nPress Ctrl+C to quit")
-    
-    # Check if required packages are installed
+    def _handle_key(self, key: int) -> bool:
+        if key in (255, 0):
+            return True
+        if key == ord("q") or key == 27:
+            return False
+        if key == ord("r"):
+            self.tracker.reset()
+            self.gesture_engine.reset()
+            self.hud.trigger_toast("Tracker & Calibration Reset")
+        elif key == ord("m"):
+            self.config.compact_hud = not self.config.compact_hud
+            self.config.save()
+        elif key == ord("p"):
+            new_prof = self.config.cycle_profile()
+            self.config.save()
+            self.hud.trigger_toast(
+                f"Profile: {self.config.get_active_profile_data()['name']}"
+            )
+        elif key == ord("c"):
+            modes = ["clutch", "dwell", "instant"]
+            idx = modes.index(self.config.activation_mode)
+            self.config.activation_mode = modes[(idx + 1) % len(modes)]
+            self.gesture_engine.reset()
+            self.config.save()
+            self.hud.trigger_toast(f"Activation: {self.config.activation_mode.upper()}")
+        elif key in (ord("1"), ord("2"), ord("3")):
+            preset_keys = ["ultra_light", "balanced", "max_range"]
+            chosen = preset_keys[key - ord("1")]
+            self.config.performance_preset = chosen
+            preset = self.config.get_preset()
+            if self.camera is not None:
+                self.camera.reconfigure(
+                    preset.capture_width, preset.capture_height, self.config.mirror_camera
+                )
+            self.config.save()
+            self.hud.trigger_toast(f"CPU Preset: {preset.label}")
+        return True
+
+    def cleanup(self) -> None:
+        if self.camera is not None:
+            self.camera.stop()
+        try:
+            cv2.destroyAllWindows()
+        except Exception:
+            pass
+        self.tracker.close()
+        elapsed = max(0.1, time.perf_counter() - self.stats["start_time"])
+        print(
+            f"\n📊 Session Summary: {self.stats['total_frames']} frames in {elapsed:.1f}s "
+            f"({self.stats['total_frames']/elapsed:.1f} avg FPS), "
+            f"{self.stats['gestures_triggered']} commands executed."
+        )
+
+
+def run_benchmark(config: SystemConfig) -> int:
+    print("⚡ Running CPU Long-Range Pipeline Benchmark...")
+    tracker = LongRangeHandTracker(config)
     try:
-        import cv2
-        import mediapipe
-        import pyautogui
-        import numpy
-        print("\n✅ All required packages are installed!")
-    except ImportError as e:
-        print(f"\n❌ Missing package: {e}")
-        print("\nPlease install required packages:")
-        print("pip install opencv-python mediapipe pyautogui numpy")
-        return
-    
-    # Create and run the gesture controller
-    controller = GesturePresentationController()
-    controller.run()
+        frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+        for _ in range(4):
+            tracker.process_frame(frame)
+        n = 25
+        t0 = time.perf_counter()
+        for _ in range(n):
+            tracker.process_frame(frame)
+        avg_ms = (time.perf_counter() - t0) / n * 1000.0
+        print(f"  Backend          : {tracker._backend_type}")
+        print(f"  Preset           : {config.get_preset().label}")
+        print(f"  Avg Frame Latency: {avg_ms:.2f} ms")
+        print(f"  Throughput Cap   : {1000.0 / max(avg_ms, 0.1):.1f} FPS on CPU")
+        return 0
+    finally:
+        tracker.close()
+
+
+def run_studio_server(
+    config: SystemConfig, host: str = "0.0.0.0", port: int = 8000, open_browser: bool = False
+) -> int:
+    import uvicorn
+    from vision_control.server import create_app
+
+    app = create_app(config=config)
+    url = f"http://localhost:{port}"
+    print(f"🌐 Vision Control Web Studio running at {url} (bound to {host}:{port})")
+    print("   Real-time WebSocket OS Bridge (/ws) active for PowerPoint, Media & Air Mouse.")
+    if open_browser:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+    uvicorn.run(app, host=host, port=port, log_level="info")
+    return 0
+
+
+def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Vision Control v2 — Long-Range CPU Hand Gesture Control"
+    )
+    parser.add_argument(
+        "--studio",
+        action="store_true",
+        help="Launch the modern Web Control Studio & WebSocket OS Bridge server",
+    )
+    parser.add_argument(
+        "--open-browser",
+        action="store_true",
+        help="Automatically open the Web Studio URL in default browser (with --studio)",
+    )
+    parser.add_argument("--host", default="0.0.0.0", help="Server bind host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8000, help="Server port (default: 8000)")
+    parser.add_argument(
+        "--preset",
+        choices=list(PERFORMANCE_PRESETS.keys()),
+        help="CPU performance & range preset",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=PROFILE_ORDER,
+        help="Active control profile (presentation, media, air_mouse, custom)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["clutch", "dwell", "instant"],
+        help="Gesture activation mode",
+    )
+    parser.add_argument("--camera", type=int, help="Camera device index (default: 0)")
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Start Desktop HUD in compact floating corner PiP mode",
+    )
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="Run a headless CPU inference latency benchmark and exit",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    args = parse_args(argv)
+    config = SystemConfig.load()
+
+    if args.preset:
+        config.performance_preset = args.preset
+    if args.profile:
+        config.active_profile = args.profile
+    if args.mode:
+        config.activation_mode = args.mode
+    if args.camera is not None:
+        config.camera_index = args.camera
+    if args.compact:
+        config.compact_hud = True
+
+    if args.benchmark:
+        return run_benchmark(config)
+
+    if args.studio:
+        return run_studio_server(
+            config, host=args.host, port=args.port, open_browser=args.open_browser
+        )
+
+    controller = GesturePresentationController(config=config)
+    return controller.run()
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

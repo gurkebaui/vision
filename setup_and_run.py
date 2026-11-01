@@ -1,174 +1,93 @@
 #!/usr/bin/env python3
 """
-Setup and Run Script for AI Gesture Presentation Control
-Installs required packages and runs the gesture control application
+Vision Control v2 — Automated Setup, Diagnostics & Launcher
+Checks Python environment, installs dependencies from requirements.txt,
+runs a quick CPU benchmark, and launches Desktop HUD or Web Control Studio.
 """
 
+from __future__ import annotations
+
+import importlib
+import platform
 import subprocess
 import sys
-import os
-import platform
+from pathlib import Path
 
-def install_package(package):
-    """Install a package using pip"""
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        return True
-    except subprocess.CalledProcessError:
+REPO_ROOT = Path(__file__).resolve().parent
+
+
+def check_python() -> bool:
+    v = sys.version_info
+    print(f"Python Runtime : {v.major}.{v.minor}.{v.micro} ({platform.system()} {platform.machine()})")
+    if (v.major, v.minor) < (3, 9):
+        print("❌ Python 3.9+ is required.")
         return False
+    return True
 
-def check_package(package):
-    """Check if a package is installed"""
-    try:
-        __import__(package.replace('-', '_'))
-        return True
-    except ImportError:
-        return False
 
-def setup_environment():
-    """Set up the Python environment with required packages"""
-    print("🔧 Setting up AI Gesture Control environment...")
-    print("=" * 50)
-    
-    required_packages = [
-        "opencv-python",
-        "mediapipe", 
-        "pyautogui",
-        "numpy",
-        "Pillow"
+def ensure_dependencies() -> bool:
+    required_imports = [
+        ("numpy", "numpy"),
+        ("cv2", "opencv-python"),
+        ("mediapipe", "mediapipe"),
+        ("PIL", "Pillow"),
+        ("fastapi", "fastapi"),
+        ("uvicorn", "uvicorn"),
     ]
-    
-    missing_packages = []
-    
-    for package in required_packages:
-        print(f"Checking {package}...", end=" ")
-        if check_package(package):
-            print("✅ Already installed")
-        else:
-            print("❌ Missing")
-            missing_packages.append(package)
-    
-    if missing_packages:
-        print(f"\n📦 Installing {len(missing_packages)} missing packages...")
-        
-        for package in missing_packages:
-            print(f"Installing {package}...", end=" ")
-            if install_package(package):
-                print("✅ Success")
-            else:
-                print("❌ Failed")
-                return False
-    
-    print("\n✅ Environment setup complete!")
-    return True
-
-def check_system_requirements():
-    """Check system requirements"""
-    print("\n🔍 Checking system requirements...")
-    print("=" * 30)
-    
-    # Check Python version
-    python_version = sys.version_info
-    print(f"Python version: {python_version.major}.{python_version.minor}.{python_version.micro}")
-    
-    if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 7):
-        print("❌ Python 3.7 or higher is required")
-        return False
-    
-    # Check operating system
-    os_name = platform.system()
-    print(f"Operating System: {os_name} {platform.release()}")
-    
-    if os_name not in ["Windows", "Darwin", "Linux"]:
-        print("⚠️  Unsupported operating system")
-        return False
-    
-    # Check for camera
-    try:
-        import cv2
-        cap = cv2.VideoCapture(0)
-        if cap.isOpened():
-            print("✅ Camera detected")
-            cap.release()
-        else:
-            print("⚠️  No camera detected - application may not work properly")
-    except:
-        print("⚠️  Cannot check camera - OpenCV not installed")
-    
-    return True
-
-def provide_usage_instructions():
-    """Provide usage instructions"""
-    print("\n📖 Usage Instructions")
-    print("=" * 30)
-    print("1. Make sure PowerPoint is open with your presentation")
-    print("2. Start the presentation mode (F5 or Shift+F5)")
-    print("3. Run this application")
-    print("4. Position your hand in front of the camera")
-    print("5. Lift a finger to activate the 3-second gesture window")
-    print("6. Perform a gesture within 3 seconds")
-    print("7. Watch as PowerPoint responds to your gestures!")
-    
-    print("\n🎯 Gesture Commands:")
-    print("  ✋ Open Palm     - Play/Pause presentation")
-    print("  ✊ Closed Fist   - Stop presentation") 
-    print("  ☝️ Point Up       - Next slide")
-    print("  👇 Point Down     - Previous slide")
-    print("  👍 Thumbs Up      - Zoom in")
-    print("  ✌️ Peace Sign      - Toggle pointer mode")
-    print("  👈 Swipe Left     - Previous slide")
-    print("  👉 Swipe Right    - Next slide")
-    
-    print("\n⚙️  Controls:")
-    print("  'q' - Quit application")
-    print("  'r' - Reset gesture detection")
-
-def main():
-    """Main setup and run function"""
-    print("🚀 AI Gesture Presentation Control Setup")
-    print("=" * 50)
-    print("This script will check and install required packages,")
-    print("then run the gesture control application.")
-    
-    # Check system requirements
-    if not check_system_requirements():
-        print("\n❌ System requirements not met. Please check the requirements above.")
-        return
-    
-    # Setup environment
-    if not setup_environment():
-        print("\n❌ Environment setup failed. Please check the error messages above.")
-        return
-    
-    # Provide usage instructions
-    provide_usage_instructions()
-    
-    # Ask user if they want to continue
-    print("\n🚀 Ready to start the application!")
-    response = input("Do you want to start the gesture control application now? (y/n): ").lower().strip()
-    
-    if response in ['y', 'yes', '']:
-        print("\n🎯 Starting AI Gesture Control...")
+    missing = []
+    for mod_name, pkg_name in required_imports:
         try:
-            # Import and run the main application
-            from gesture_presentation_control import GesturePresentationController
-            
-            controller = GesturePresentationController()
-            controller.run()
-            
-        except ImportError as e:
-            print(f"❌ Error importing main module: {e}")
-            print("\nPlease make sure all packages are installed correctly.")
-            print("You can try installing them manually:")
-            print("pip install -r requirements.txt")
-        
-        except Exception as e:
-            print(f"❌ Error running application: {e}")
-            print("\nPlease check the error message and try again.")
-    
-    else:
-        print("\n👋 Setup complete. You can run the application later with:")
-        print("python gesture_presentation_control.py")
+            importlib.import_module(mod_name)
+        except ImportError:
+            missing.append(pkg_name)
+
+    if not missing:
+        print("✅ All core Python packages are installed.")
+        return True
+
+    print(f"📦 Installing missing packages ({', '.join(missing)}) from requirements.txt...")
+    req_file = REPO_ROOT / "requirements.txt"
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
+        return True
+    except subprocess.CalledProcessError as exc:
+        print(f"❌ Package installation failed: {exc}")
+        return False
+
+
+def main() -> int:
+    print("🚀 Vision Control v2 — Long-Range Gesture System Setup")
+    print("=" * 56)
+    if not check_python():
+        return 1
+    if not ensure_dependencies():
+        return 1
+
+    print("\nSelect launch mode:")
+    print("  [1] Native Desktop Long-Range HUD  (Webcam -> Python -> OS)")
+    print("  [2] Web Control Studio + OS Bridge (Browser UI + Interactive Stage)")
+    print("  [3] Run CPU Benchmark & System Self-Test")
+    print("  [q] Exit")
+
+    try:
+        choice = input("\nEnter choice [1/2/3/q] (default: 1): ").strip().lower()
+    except EOFError:
+        choice = "3"
+
+    if choice in ("", "1"):
+        from gesture_presentation_control import main as run_main
+
+        return run_main([])
+    if choice == "2":
+        from gesture_presentation_control import main as run_main
+
+        return run_main(["--studio", "--open-browser"])
+    if choice == "3":
+        return subprocess.call([sys.executable, str(REPO_ROOT / "test_gesture_system.py")])
+
+    print("👋 Setup complete.")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
