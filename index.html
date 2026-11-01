@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vision Control v2 — Long-Range Hand Gesture Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./web/css/studio.css" />
+</head>
+<body>
+  <!-- Top Studio Header -->
+  <header class="studio-topbar">
+    <div class="topbar-inner">
+      <div class="brand-mark">
+        <div class="brand-reticle">⌖</div>
+        <div>
+          <span class="brand-title">Vision Control</span>
+          <span class="brand-ver">v2.0 LONG-RANGE</span>
+        </div>
+      </div>
+
+      <nav class="studio-nav" aria-label="Workspace Views">
+        <button class="nav-tab active" data-nav-tab="studio">Control Studio</button>
+        <button class="nav-tab" data-nav-tab="stage">Presentation &amp; Media Stage</button>
+        <button class="nav-tab" data-nav-tab="bindings">Keymap &amp; Tuning</button>
+        <button class="nav-tab" data-nav-tab="calibrate">Range &amp; CPU Diagnostics</button>
+      </nav>
+
+      <div class="topbar-status">
+        <span id="camera-status-badge" class="pill pill-muted">Standby</span>
+        <span id="os-bridge-badge" class="pill pill-muted">Connecting...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace-shell">
+    <!-- ==================================================================
+         TAB 1: LIVE CONTROL STUDIO
+         ================================================================== -->
+    <section class="tab-panel active" data-tab-panel="studio">
+      <div class="studio-grid">
+        <!-- Left Column: Optics Monitor + Mini Live Stage -->
+        <div>
+          <div class="panel-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h2 class="card-title">Long-Range Smart-Zoom Optics</h2>
+                <span id="clutch-state-pill" class="pill pill-amber">LOCKED · Hold Open Palm 0.4s</span>
+              </div>
+              <div class="btn-row">
+                <button id="btn-start-camera" class="btn-primary">Start Camera</button>
+                <button id="btn-start-sim" class="btn-secondary">Range Simulator (0.5–5m)</button>
+                <button id="btn-stop-camera" class="btn-danger">Stop</button>
+              </div>
+            </div>
+
+            <div class="optics-viewport">
+              <video id="studio-video" playsinline muted></video>
+              <canvas id="studio-canvas"></canvas>
+
+              <!-- Smart-Zoom Picture-in-Picture Lock Inset -->
+              <div id="zoom-pip-wrap" class="zoom-pip-wrap">
+                <canvas id="zoom-pip-canvas"></canvas>
+                <div id="zoom-pip-label" class="zoom-pip-label">ZOOM 1.0x</div>
+              </div>
+
+              <!-- Triggered Command Toast -->
+              <div id="hud-action-toast" class="hud-toast">Next Slide</div>
+
+              <!-- Model Loader Overlay -->
+              <div id="model-loading-overlay" class="loading-overlay">
+                <div class="spinner-ring"></div>
+                <div id="model-loading-text" style="font-size: 0.88rem; color: #cbd5e1;">
+                  Loading Long-Range Vision Models...
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive Range Simulator Controls (visible in Simulator mode) -->
+            <div id="sim-toolbar" class="sim-toolbar">
+              <div class="sim-row">
+                <div class="sim-dist-group">
+                  <span>Simulated Speaker Distance:</span>
+                  <input
+                    id="sim-distance-slider"
+                    type="range"
+                    min="0.5"
+                    max="5.0"
+                    step="0.1"
+                    value="2.6"
+                    style="width: 150px;"
+                  />
+                  <strong id="sim-distance-val">2.6m</strong>
+                  <span style="font-size: 0.74rem; color: #64748b;">
+                    (Toggle "Smart ROI Zoom" off on the right to compare 1m legacy drop-off!)
+                  </span>
+                </div>
+              </div>
+              <div class="sim-row">
+                <div class="sim-pose-btns">
+                  <button class="pose-pill-btn active" data-sim-pose="open_palm">✋ Open Palm</button>
+                  <button class="pose-pill-btn" data-sim-pose="swipe_right">👉 Flick Right</button>
+                  <button class="pose-pill-btn" data-sim-pose="swipe_left">👈 Flick Left</button>
+                  <button class="pose-pill-btn" data-sim-pose="pointing_up">☝️ Point Up</button>
+                  <button class="pose-pill-btn" data-sim-pose="pointing_down">👇 Point Down</button>
+                  <button class="pose-pill-btn" data-sim-pose="peace_sign">✌️ Peace (Laser)</button>
+                  <button class="pose-pill-btn" data-sim-pose="thumbs_up">👍 Thumbs Up</button>
+                  <button class="pose-pill-btn" data-sim-pose="thumbs_down">👎 Thumbs Down</button>
+                  <button class="pose-pill-btn" data-sim-pose="pinch">👌 Pinch (Click/Draw)</button>
+                  <button class="pose-pill-btn" data-sim-pose="three_fingers">🤟 3-Fingers (Mode)</button>
+                  <button class="pose-pill-btn" data-sim-pose="closed_fist">✊ Fist (Lock)</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Optical & CPU Telemetry Strip -->
+            <div class="telemetry-strip">
+              <div class="telemetry-cell">
+                <span class="t-label">Throughput</span>
+                <span class="t-value"><span id="metric-fps">0</span> FPS</span>
+              </div>
+              <div class="telemetry-cell">
+                <span class="t-label">CV Frame Time</span>
+                <span class="t-value" id="metric-latency">-- ms</span>
+              </div>
+              <div class="telemetry-cell">
+                <span class="t-label">Speaker Range</span>
+                <span class="t-value" id="metric-range">--</span>
+              </div>
+              <div class="telemetry-cell">
+                <span class="t-label">Smart Zoom</span>
+                <span class="t-value" id="metric-zoom">1.0x</span>
+              </div>
+              <div class="telemetry-cell">
+                <span class="t-label">Tracking Tier</span>
+                <span class="t-value" id="metric-source">Standby</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Embedded Live Stage Preview -->
+          <div class="panel-card mini-stage-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-title">Live Presentation &amp; Audio Preview</span>
+                <span id="mini-slide-count" class="pill pill-muted">Slide 1 / 6</span>
+              </div>
+              <div class="btn-row">
+                <button class="btn-ghost btn-xs" data-trigger-action="prev_slide">← Prev</button>
+                <button class="btn-ghost btn-xs" data-trigger-action="next_slide">Next →</button>
+                <button class="btn-ghost btn-xs" data-trigger-action="toggle_pointer">Laser</button>
+                <button class="btn-secondary btn-xs" data-nav-tab="stage">Open Full Stage ↗</button>
+              </div>
+            </div>
+            <div class="mini-slide-surface">
+              <div id="mini-laser-dot" class="laser-dot"></div>
+              <h4 id="mini-slide-title">Long-Range Hand Gesture Control</h4>
+              <p id="mini-slide-sub">Stand 0.4m to 5.0m+ away. Zero clickers. Zero GPU required.</p>
+            </div>
+            <div class="mini-stage-footer">
+              <span>Tip: Hold <strong>🤟 Three Fingers</strong> to cycle Presentation → Media → Air Mouse</span>
+              <div class="mini-vol-wrap">
+                <span>Media Vol:</span>
+                <div class="mini-vol-track">
+                  <div id="mini-vol-fill" class="mini-vol-fill" style="width: 72%;"></div>
+                </div>
+                <strong id="mini-vol-text" style="font-family: var(--font-mono);">72%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Control Dock -->
+        <aside class="panel-card dock-stack">
+          <!-- Detected Gesture Readout -->
+          <div class="dock-section">
+            <div class="section-eyebrow">
+              <span>Real-Time Biomechanical Classifier</span>
+              <span>Palm-Unit Normalized</span>
+            </div>
+            <div class="live-gesture-box">
+              <div id="live-gesture-icon" class="lg-icon">🤚</div>
+              <div class="lg-info">
+                <div id="live-gesture-name" class="lg-name">Waiting for Hand...</div>
+                <div class="conf-row">
+                  <div class="conf-track">
+                    <div id="live-conf-fill" class="conf-fill"></div>
+                  </div>
+                  <span id="live-conf-text" class="conf-val">--</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Control Profile ("PowerPoint and More") -->
+          <div class="dock-section">
+            <div class="section-eyebrow">
+              <span>Control Profile</span>
+              <span>OS + Stage</span>
+            </div>
+            <div class="profile-cards">
+              <button class="profile-btn active" data-profile-select="presentation">
+                <span class="p-title">📊 Presentation Pro</span>
+                <span class="p-sub">PowerPoint, Slides, Laser</span>
+              </button>
+              <button class="profile-btn" data-profile-select="media">
+                <span class="p-title">🎵 Media &amp; Audio</span>
+                <span class="p-sub">Play, Skip, System Vol</span>
+              </button>
+              <button class="profile-btn" data-profile-select="air_mouse">
+                <span class="p-title">🖱️ Air Mouse</span>
+                <span class="p-sub">1€ Cursor, Pinch, Scroll</span>
+              </button>
+              <button class="profile-btn" data-profile-select="custom">
+                <span class="p-title">⚡ Custom Profile</span>
+                <span class="p-sub">User Keymap Bindings</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Intentional Activation & CPU Performance Presets -->
+          <div class="dock-section">
+            <div class="section-eyebrow">
+              <span>Activation Gate (Anti-Misfire)</span>
+            </div>
+            <div class="segmented-bar" style="margin-bottom: 0.85rem;">
+              <button class="seg-btn active" data-activation-mode="clutch" title="Hold Open Palm 0.4s to unlock 4s active window">
+                Clutch Lock (4s)
+              </button>
+              <button class="seg-btn" data-activation-mode="dwell" title="Immediate flick swipes + 0.4s radial dwell on static poses">
+                Direct Dwell
+              </button>
+              <button class="seg-btn" data-activation-mode="instant" title="Fastest trigger for Air Mouse & power users">
+                Instant
+              </button>
+            </div>
+
+            <div class="section-eyebrow">
+              <span>Laptop CPU Preset (No GPU Needed)</span>
+            </div>
+            <div class="segmented-bar">
+              <button class="seg-btn" data-cpu-preset="ultra_light">Ultra-Light</button>
+              <button class="seg-btn active" data-cpu-preset="balanced">Balanced</button>
+              <button class="seg-btn" data-cpu-preset="max_range">Max-Range</button>
+            </div>
+
+            <div class="toggle-list">
+              <label class="toggle-row">
+                <span>3-Tier Smart ROI Zoom (1m – 5m+ Range)</span>
+                <input id="toggle-smart-zoom" type="checkbox" checked />
+              </label>
+              <label class="toggle-row">
+                <span>Upper-Body Pose Wrist Spotlight &amp; Arm Filter</span>
+                <input id="toggle-pose-assist" type="checkbox" checked />
+              </label>
+              <label class="toggle-row">
+                <span>Execute Desktop OS Keystrokes (when bridged)</span>
+                <input id="toggle-os-control" type="checkbox" checked />
+              </label>
+            </div>
+          </div>
+
+          <!-- Active Gesture Map Reference -->
+          <div class="dock-section">
+            <div class="section-eyebrow">
+              <span>Active Profile Gestures</span>
+              <button class="btn-ghost btn-xs" data-nav-tab="bindings">Customize</button>
+            </div>
+            <div id="quick-gesture-grid" class="gesture-chips-grid"></div>
+          </div>
+
+          <!-- Recent Triggered Commands -->
+          <div class="dock-section">
+            <div class="section-eyebrow">
+              <span>Command Telemetry Log</span>
+            </div>
+            <div id="command-history-list" class="history-feed">
+              <div class="empty-log">Perform a gesture or click Simulator poses to test</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 2: PRESENTATION, LASER/INK, MEDIA & AIR-SCROLL STAGE
+         ================================================================== -->
+    <section class="tab-panel" data-tab-panel="stage">
+      <div class="stage-layout">
+        <div class="panel-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">Interactive Presentation Deck</h2>
+              <span id="stage-slide-counter" class="pill pill-cyan">Slide 1 of 6</span>
+            </div>
+            <div class="btn-row">
+              <button class="btn-secondary btn-xs" data-trigger-action="prev_slide">← Prev</button>
+              <button class="btn-secondary btn-xs" data-trigger-action="play_pause">Play / Pause</button>
+              <button class="btn-secondary btn-xs" data-trigger-action="next_slide">Next →</button>
+              <button class="btn-secondary btn-xs" data-trigger-action="toggle_pointer">Laser Pointer</button>
+              <button id="btn-clear-ink" class="btn-ghost btn-xs">Clear Ink</button>
+              <button id="btn-stage-fullscreen" class="btn-primary btn-xs">⛶ Fullscreen</button>
+            </div>
+          </div>
+
+          <div id="stage-deck-viewport" class="stage-deck-viewport">
+            <canvas id="stage-ink-canvas"></canvas>
+            <div id="stage-laser-dot" class="laser-dot"></div>
+            <div id="stage-blackout-overlay" class="blackout-curtain">
+              PRESENTATION BLACKOUT ACTIVE — Show Thumbs Down or Next Slide to resume
+            </div>
+
+            <div id="stage-slide-card" class="stage-slide-card">
+              <div id="stage-slide-tag" class="slide-tag">VISION CONTROL v2.0</div>
+              <h3 id="stage-slide-title" class="slide-main-title">Long-Range Hand Gesture Control</h3>
+              <p id="stage-slide-sub" class="slide-subtitle">
+                Stand 0.4m to 5.0m+ away. Zero clickers. Zero GPU required.
+              </p>
+              <div class="slide-body-grid">
+                <ul id="stage-slide-bullets" class="slide-bullets"></ul>
+                <div class="slide-kpi-box">
+                  <div id="stage-slide-metric" class="kpi-num">5.0m+</div>
+                  <div id="stage-slide-metric-label" class="kpi-lbl">Effective Range</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage Side Stack: Media Deck + Air-Scroll Reader + Custom Slide Importer -->
+        <div class="stage-side-stack">
+          <div class="panel-card">
+            <div class="card-header">
+              <span class="card-title">Media &amp; Volume Sandbox</span>
+              <span id="media-play-badge" class="pill pill-muted">PAUSED</span>
+            </div>
+            <div class="media-player-body">
+              <div id="media-track-title" style="font-weight: 600; font-size: 0.96rem;">
+                Keynote Ambient Opening
+              </div>
+              <div id="media-track-artist" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                Studio Synth Ensemble · 03:42
+              </div>
+              <div class="btn-row" style="margin-bottom: 0.9rem;">
+                <button class="btn-secondary btn-xs" data-trigger-action="prev_track">⏮ Prev</button>
+                <button class="btn-primary btn-xs" data-trigger-action="play_pause">⏯ Play/Pause</button>
+                <button class="btn-secondary btn-xs" data-trigger-action="next_track">⏭ Next</button>
+                <button class="btn-ghost btn-xs" data-trigger-action="volume_mute">🔇 Mute</button>
+              </div>
+              <div class="conf-row">
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">Volume</span>
+                <div class="conf-track">
+                  <div id="media-vol-bar" class="conf-fill" style="width: 72%;"></div>
+                </div>
+                <span id="media-vol-val" class="conf-val">72%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="card-header">
+              <span class="card-title">Air-Scroll Teleprompter</span>
+              <div class="btn-row">
+                <button class="btn-ghost btn-xs" data-trigger-action="scroll_up">↑ Up</button>
+                <button class="btn-ghost btn-xs" data-trigger-action="scroll_down">↓ Down</button>
+              </div>
+            </div>
+            <div class="reader-body">
+              <div id="air-reader-scroll" class="air-reader-box">
+                <p><strong>Speaker Notes &amp; Teleprompter:</strong> Switch to the <em>Air Mouse &amp; Reader</em> profile to scroll documents, teleprompters, or long web pages hands-free from across the room.</p>
+                <p><strong>1. Distance Independence:</strong> Because finger joint curl angles and Palm-Unit velocities normalize out camera perspective, stepping from 0.8m back to 4.0m requires zero recalibration.</p>
+                <p><strong>2. Laser &amp; Pinch Highlighting:</strong> Toggle Laser Pointer with Peace Sign (✌️), aim smoothly with the 1-Euro filter, and pinch Thumb + Index (👌) to draw live cyan annotations directly on your slide.</p>
+                <p><strong>3. Resting Arm Rejection:</strong> Let your non-gesturing arm hang naturally by your side — upper-body pose tracking ignores wrists below waist level.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="card-header">
+              <span class="card-title">Load Your Own Markdown Slides</span>
+            </div>
+            <div class="deck-import-body">
+              <textarea
+                id="custom-deck-textarea"
+                class="studio-textarea"
+                placeholder="# Q4 Product Keynote&#10;- Revenue up 42% YoY&#10;- Launched Long-Range Vision v2&#10;---&#10;# Roadmap&#10;- Multi-room sensor fusion&#10;- Sub-5ms CPU pipeline"
+              ></textarea>
+              <button id="btn-import-deck" class="btn-secondary btn-xs">Load Custom Deck</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 3: KEYMAP & SENSITIVITY TUNING
+         ================================================================== -->
+    <section class="tab-panel" data-tab-panel="bindings">
+      <div class="bindings-layout">
+        <div class="panel-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">Gesture-to-Action Matrix</h2>
+            </div>
+            <div class="btn-row">
+              <select id="select-keymap-profile" class="studio-select" style="width: auto;">
+                <option value="presentation">Presentation Pro</option>
+                <option value="media">Media &amp; Couch Control</option>
+                <option value="air_mouse">Air Mouse &amp; Reader</option>
+                <option value="custom">Custom Bindings</option>
+              </select>
+              <button id="btn-reset-defaults" class="btn-ghost btn-xs">Reset Defaults</button>
+            </div>
+          </div>
+          <table class="keymap-table">
+            <thead>
+              <tr>
+                <th>Hand Gesture</th>
+                <th>Assigned OS / Stage Command</th>
+                <th>Verify</th>
+              </tr>
+            </thead>
+            <tbody id="keymap-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-card">
+          <div class="card-header">
+            <h3 class="card-title">Response &amp; Filter Tuning</h3>
+          </div>
+          <div class="dock-section">
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Swipe Flick Sensitivity</span>
+                <strong id="val-swipe-sens">1.00x</strong>
+              </div>
+              <input id="slider-swipe-sens" type="range" min="0.5" max="1.8" step="0.05" value="1.0" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Clutch Active Window</span>
+                <strong id="val-clutch-win">4.00s</strong>
+              </div>
+              <input id="slider-clutch-win" type="range" min="1.5" max="8.0" step="0.5" value="4.0" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Direct Dwell Hold Time</span>
+                <strong id="val-dwell-hold">0.42s</strong>
+              </div>
+              <input id="slider-dwell-hold" type="range" min="0.2" max="1.0" step="0.02" value="0.42" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Air-Mouse / Laser Reach</span>
+                <strong id="val-cursor-sens">1.35x</strong>
+              </div>
+              <input id="slider-cursor-sens" type="range" min="0.8" max="2.2" step="0.05" value="1.35" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 4: RANGE CALIBRATOR & CPU DIAGNOSTICS
+         ================================================================== -->
+    <section class="tab-panel" data-tab-panel="calibrate">
+      <div class="calib-grid">
+        <div class="calib-zone-card">
+          <span class="pill pill-cyan" style="align-self: flex-start;">STEP 1 · DESK RANGE</span>
+          <h3>0.6m – 1.2m Close Check</h3>
+          <p style="font-size: 0.84rem; color: var(--text-secondary);">
+            Sit or stand near your laptop with an Open Palm visible, then capture baseline palm pixels.
+          </p>
+          <div id="calib-result-close" class="calib-result-slot">Not sampled yet</div>
+          <button class="btn-secondary btn-xs" data-calib-capture="close">Capture Desk Sample</button>
+        </div>
+
+        <div class="calib-zone-card">
+          <span class="pill pill-cyan" style="align-self: flex-start;">STEP 2 · PRESENTER RANGE</span>
+          <h3>2.0m – 3.2m Standing Check</h3>
+          <p style="font-size: 0.84rem; color: var(--text-secondary);">
+            Step 2.5m back from the camera (or set Simulator to 2.6m) and verify Smart-Zoom ROI lock.
+          </p>
+          <div id="calib-result-mid" class="calib-result-slot">Not sampled yet</div>
+          <button class="btn-secondary btn-xs" data-calib-capture="mid">Capture Presenter Sample</button>
+        </div>
+
+        <div class="calib-zone-card">
+          <span class="pill pill-emerald" style="align-self: flex-start;">STEP 3 · ROOM / STAGE RANGE</span>
+          <h3>3.5m – 5.0m+ Far Check</h3>
+          <p style="font-size: 0.84rem; color: var(--text-secondary);">
+            Step across the room (up to 5m). Upper-body Pose wrist spotlight crops your hand at 3.5x–4.5x zoom.
+          </p>
+          <div id="calib-result-far" class="calib-result-slot">Not sampled yet</div>
+          <button class="btn-secondary btn-xs" data-calib-capture="far">Capture Room Sample</button>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">CPU Pipeline Benchmark &amp; Architecture Summary</h3>
+          </div>
+          <button id="btn-run-benchmark" class="btn-primary">Run Live CPU Benchmark</button>
+        </div>
+        <div class="dock-section">
+          <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 920px;">
+            Measures end-to-end CPU inference latency on your hardware (Python XNNPACK Lite + Smart-Zoom ROI
+            when connected to the local server, plus browser 3D biomechanical &amp; 1-Euro filter throughput).
+          </p>
+          <div id="benchmark-results-box"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./web/js/app.js"></script>
+</body>
+</html>

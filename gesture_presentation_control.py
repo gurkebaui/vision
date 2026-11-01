@@ -1,372 +1,355 @@
 #!/usr/bin/env python3
 """
-AI Gesture-Controlled PowerPoint Presentation System (Improved)
-Uses OpenCV, MediaPipe, and PyAutoGUI with stabilized tracking and geometric gesture recognition.
+Vision Control v2 — Long-Range, CPU-Optimized Hand Gesture Control System
+Controls PowerPoint, Keynote, Google Slides, System Media/Volume, and Air Mouse
+from 0.4m up to 5m+ away on standard laptops without a GPU.
+
+Usage:
+  python gesture_presentation_control.py                 # Native Desktop HUD + OS Control
+  python gesture_presentation_control.py --studio        # Launch Web Control Studio + OS Bridge
+  python gesture_presentation_control.py --preset ultra_light --profile media
+  python gesture_presentation_control.py --benchmark     # Run CPU latency & FPS benchmark
 """
+
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+import webbrowser
+from typing import Optional
 
 import cv2
 import mediapipe as mp
 import numpy as np
-import pyautogui
-import time
-from collections import deque
-import math
 
-# --- Configuration ---
-SWIPE_THRESHOLD = 40        # Pixels required to register a swipe
-GESTURE_HOLD_TIME = 0.3     # How long a gesture must be held to be valid (debouncing)
+from vision_control import __version__
+from vision_control.actions import OSActionController
+from vision_control.camera import ThreadedCamera
+from vision_control.config import PERFORMANCE_PRESETS, PROFILE_ORDER, SystemConfig
+from vision_control.gestures import ScaleInvariantGestureEngine
+from vision_control.hud import ModernHUDRenderer
+from vision_control.tracker import LongRangeHandTracker
 
-class HandSmoother:
-    """Filters hand landmarks to reduce jitter using Exponential Moving Average."""
-    def __init__(self, alpha=0.5):
-        self.alpha = alpha
-        self.prev_landmarks = None
-
-    def update(self, landmarks, image_shape):
-        h, w = image_shape[:2]
-        # Convert landmarks to numpy array for vector math
-        current_landmarks = np.array([[lm.x * w, lm.y * h] for lm in landmarks])
-        
-        if self.prev_landmarks is None:
-            self.prev_landmarks = current_landmarks
-            return current_landmarks
-            
-        # EMA Filter: Smooth = Alpha * Current + (1 - Alpha) * Previous
-        smoothed = self.alpha * current_landmarks + (1 - self.alpha) * self.prev_landmarks
-        self.prev_landmarks = smoothed
-        return smoothed
 
 class GesturePresentationController:
-    def __init__(self, camera_index=0, smoothing=0.6, mouse_speed=1.5, width=640, height=480):
-        # Configuration
-        self.camera_index = camera_index
-        self.mouse_speed = mouse_speed
-        
-        # Initialize MediaPipe Hands
-        self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            model_complexity=1,
-            min_detection_confidence=0.6,
-            min_tracking_confidence=0.5
+    """
+    Main desktop runtime combining ThreadedCamera, LongRangeHandTracker,
+    ScaleInvariantGestureEngine, OSActionController, and ModernHUDRenderer.
+    """
+
+    def __init__(
+        self,
+        config: Optional[SystemConfig] = None,
+        *,
+        camera_index: Optional[int] = None,
+        smoothing: Optional[float] = None,
+        mouse_speed: Optional[float] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        backend_preference: str = "auto",
+    ) -> None:
+        self.config = config or SystemConfig.load()
+        if camera_index is not None:
+            self.config.camera_index = int(camera_index)
+        if smoothing is not None:
+            self.config.cursor_smoothing_min_cutoff = max(0.3, min(4.0, 2.2 - float(smoothing)))
+        if mouse_speed is not None:
+            self.config.cursor_smoothing_beta = max(0.1, float(mouse_speed) * 0.45)
+        self._override_size = (width, height) if (width and height) else None
+
+        self.tracker = LongRangeHandTracker(
+            self.config, backend_preference=backend_preference
         )
-        self.mp_draw = mp.solutions.drawing_utils
-        
-        # Smoothing
-        self.smoother = HandSmoother(alpha=smoothing)
-        
-        # Gesture State
-        self.last_gesture = None
-        self.gesture_start_time = 0
-        self.last_action_time = 0
-        
-        # Movement tracking for Swipes
-        self.center_history = deque(maxlen=10)
-        
-        # 3-Second Window Logic
-        self.control_window_active = False
-        self.control_window_start = 0
-        self.control_window_duration = 2.0
-        
-        # Mouse Mode State
-        self.mouse_mode = False
-        self.mouse_clicked = False
-        self.last_mouse_pos = None
-        
-        # Screen size for mouse mapping
-        self.screen_w, self.screen_h = pyautogui.size()
-        
-        # Camera Setup
-        self.cap = None
-        self.display_width = width
-        self.display_height = height
-        
-        # PyAutoGUI Settings
-        pyautogui.FAILSAFE = False # Disable failsafe for corner reaching
-        pyautogui.PAUSE = 0.0 # No delay for smoother mouse
+        self.gesture_engine = ScaleInvariantGestureEngine(self.config)
+        self.actions = OSActionController(self.config)
+        self.hud = ModernHUDRenderer(self.config)
+        self.camera: Optional[ThreadedCamera] = None
 
-        print(f"🤖 AI Presentation Control Initialized (Cam: {camera_index}, Res: {width}x{height}, Smooth: {smoothing})")
+        self.stats = {
+            "total_frames": 0,
+            "gestures_triggered": 0,
+            "start_time": time.perf_counter(),
+        }
 
-    def start_camera(self):
-        self.cap = cv2.VideoCapture(self.camera_index)
-        if not self.cap.isOpened():
-            print("❌ Error: Cannot access camera!")
+    def start_camera(self) -> bool:
+        preset = self.config.get_preset()
+        cap_w, cap_h = self._override_size or (preset.capture_width, preset.capture_height)
+        self.camera = ThreadedCamera(
+            camera_index=self.config.camera_index,
+            width=cap_w,
+            height=cap_h,
+            fps=preset.target_fps,
+            mirror=self.config.mirror_camera,
+        )
+        ok = self.camera.start()
+        if not ok:
+            print(
+                f"❌ Cannot open camera index {self.config.camera_index}. "
+                "Try --camera 1 or launch Web Studio with --studio."
+            )
             return False
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.display_width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.display_height)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        print(
+            f"✅ Camera active at {self.camera.actual_width}x{self.camera.actual_height} "
+            f"(Preset: {preset.label})"
+        )
         return True
 
-    def get_extended_fingers(self, landmarks_np):
-        """
-        Detects extended fingers using geometric distance from wrist.
-        Robust against hand rotation.
-        """
-        extended = []
-        WRIST = 0
-        finger_tips = [8, 12, 16, 20]   # Index, Middle, Ring, Pinky
-        finger_pips = [6, 10, 14, 18]   # Lower joints
-        
-        wrist_pos = landmarks_np[WRIST]
-        
-        # 1. Check Thumb
-        thumb_tip = landmarks_np[4]
-        thumb_ip = landmarks_np[3]
-        index_mcp = landmarks_np[5]
-        
-        if np.linalg.norm(thumb_tip - index_mcp) > np.linalg.norm(thumb_ip - index_mcp) * 1.2:
-             extended.append('thumb')
+    def run(self) -> int:
+        mp_ver = getattr(mp, "__version__", "unknown")
+        print(f"🚀 Vision Gesture Control v{__version__}")
+        print("=" * 56)
+        print(f"  MP Backend  : {self.tracker._backend_type} (mediapipe {mp_ver})")
+        print(f"  Profile     : {self.config.get_active_profile_data()['name']}")
+        print(f"  CPU Preset  : {self.config.get_preset().label}")
+        print(f"  Activation  : {self.config.activation_mode.upper()}")
+        print(f"  Smart Zoom  : {'ON (0.4m - 5.0m+ Range)' if self.config.smart_zoom_enabled else 'OFF'}")
+        print("=" * 56)
 
-        # 2. Check Fingers
-        names = ['index', 'middle', 'ring', 'pinky']
-        for tip_idx, pip_idx, name in zip(finger_tips, finger_pips, names):
-            tip_pos = landmarks_np[tip_idx]
-            pip_pos = landmarks_np[pip_idx]
-            
-            dist_tip = np.linalg.norm(tip_pos - wrist_pos)
-            dist_pip = np.linalg.norm(pip_pos - wrist_pos)
-            
-            if dist_tip > dist_pip * 1.1: 
-                extended.append(name)
-                
-        return extended
+        if not self.start_camera() or self.camera is None:
+            return 1
 
-    def detect_dynamic_gesture(self, current_center):
-        """Detects swipes based on movement history."""
-        self.center_history.append(current_center)
-        if len(self.center_history) < 4:
-            return None
-            
-        start_pos = self.center_history[0]
-        end_pos = self.center_history[-1]
-        
-        dx = end_pos[0] - start_pos[0]
-        dy = end_pos[1] - start_pos[1]
-        
-        if abs(dx) > SWIPE_THRESHOLD and abs(dy) < SWIPE_THRESHOLD / 2:
-            if dx > 0: return "swipe_right"
-            else: return "swipe_left"
-            
-        return None
+        win_name = "Vision Control v2 — Long-Range Gesture HUD"
+        cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
 
-    def classify_pose(self, extended_fingers):
-        """Maps extended fingers to a static pose name."""
-        count = len(extended_fingers)
-        
-        if count == 5: return "open_palm"
-        if count == 0: return "fist"
-        if count == 1 and 'index' in extended_fingers: return "point_up"
-        if count == 1 and 'thumb' in extended_fingers: return "thumbs_up"
-        if count == 2 and 'index' in extended_fingers and 'middle' in extended_fingers: return "peace"
-        if count == 2 and 'thumb' in extended_fingers and 'pinky' in extended_fingers: return "shaka"
-        if count == 1 and 'middle' in extended_fingers: return "middle_finger"
-        
-        return "unknown"
+        last_frame_id = 0
+        ema_fps = 30.0
+        prev_loop_t = time.perf_counter()
 
-    def handle_mouse_control(self, landmarks_np, frame_shape):
-        """
-        Controls the mouse cursor using the index finger tip.
-        Performs click if thumb and index pinch.
-        """
-        h, w = frame_shape[:2]
-        index_tip = landmarks_np[8]
-        thumb_tip = landmarks_np[4]
-        
-        # Map Coordinates (Camera pixel -> Screen pixel)
-        # We map a central "active area" of the camera to the full screen
-        margin_x = w * 0.2
-        margin_y = h * 0.2
-        active_w = w - 2 * margin_x
-        active_h = h - 2 * margin_y
-        
-        # Normalize relative to active area
-        rel_x = (index_tip[0] - margin_x) / active_w
-        rel_y = (index_tip[1] - margin_y) / active_h
-        
-        # Clamp to 0-1
-        rel_x = max(0, min(1, rel_x))
-        rel_y = max(0, min(1, rel_y))
-        
-        # Map to screen
-        target_x = int(rel_x * self.screen_w)
-        target_y = int(rel_y * self.screen_h)
-        
-        # Move Mouse
-        pyautogui.moveTo(target_x, target_y)
-        
-        # Click Detection (Pinch)
-        # Calculate distance between thumb and index tip in pixel space
-        pinch_dist = np.linalg.norm(index_tip - thumb_tip)
-        
-        # Threshold depends on hand size (distance to wrist), but fixed pixel approx 30-40 works for 720p
-        if pinch_dist < 40: 
-            if not self.mouse_clicked:
-                pyautogui.click()
-                self.mouse_clicked = True
-                return "click"
-        else:
-            self.mouse_clicked = False
-            
-        return "move"
-
-    def process_logic(self, pose, dynamic_gesture, landmarks_np, frame_shape):
-        current_time = time.time()
-        
-        # Toggle Mouse Mode (Hold Peace Sign for > 1s)
-        if pose == "peace":
-            if self.gesture_start_time == 0:
-                self.gesture_start_time = current_time
-            elif current_time - self.gesture_start_time > 0.7:
-                # Toggle
-                self.mouse_mode = not self.mouse_mode
-                self.gesture_start_time = 0 # Reset
-                print(f"🖱️ Mouse Mode: {'ON' if self.mouse_mode else 'OFF'}")
-                return f"mouse_mode_{'on' if self.mouse_mode else 'off'}"
-        else:
-            self.gesture_start_time = 0
-
-        # --- MOUSE MODE ---
-        if self.mouse_mode:
-            return self.handle_mouse_control(landmarks_np, frame_shape)
-
-        # --- GESTURE MODE ---
-        # Activation
-        if pose == "point_up" and not self.control_window_active:
-            self.control_window_active = True
-            self.control_window_start = current_time
-            return "activate"
-
-        if self.control_window_active:
-            # Expiry check
-            if current_time - self.control_window_start > self.control_window_duration:
-                self.control_window_active = False
-                return "expired"
-                
-            # Cooldown
-            if current_time - self.last_action_time < 0.8:
-                return None
-
-            command = None
-            # Priority: Dynamic Swipes > Static Poses
-            if dynamic_gesture == "swipe_right":
-                command = "next_slide"
-                pyautogui.press('right')
-            elif dynamic_gesture == "swipe_left":
-                command = "prev_slide"
-                pyautogui.press('left')
-            elif pose == "shaka": # 🤙 Alternative for Next Slide
-                command = "next_slide"
-                pyautogui.press('right')
-            #elif pose == "open_palm":
-                #command = "play_pause"
-                #pyautogui.press('space')
-            #elif pose == "fist":
-                #command = "stop"
-                #pyautogui.press('escape')
-            #elif pose == "thumbs_up":
-                #command = "zoom_in"
-                #pyautogui.hotkey('ctrl', '+') 
-            #elif dynamic_gesture == "middle_finger":
-                #command = "close"
-                #pyautogui.press('Q')
-
-            if command:
-                self.last_action_time = current_time
-                
-                # Special Case: Navigation commands force re-activation (Strict Mode)
-                if command in ["next_slide", "prev_slide"]:
-                    self.control_window_active = False
-                else:
-                    # Other commands (Zoom, Play, etc.) keep the window open
-                    self.control_window_start = current_time 
-                
-                return command
-                
-        return None
-
-    def draw_ui(self, frame, pose, feedback, extended_fingers):
-        h, w = frame.shape[:2]
-        
-        # Top Status Bar
-        cv2.rectangle(frame, (0, 0), (w, 60), (30, 30, 30), -1)
-        
-        # Mode Indicator
-        if self.mouse_mode:
-            cv2.putText(frame, "MOUSE MODE (Pinch to Click)", (30, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-            cv2.circle(frame, (w-50, 30), 15, (0, 255, 255), -1)
-        else:
-            status = "ACTIVE" if self.control_window_active else "STANDBY"
-            color = (0, 255, 0) if self.control_window_active else (100, 100, 100)
-            cv2.putText(frame, f"MODE: GESTURE ({status})", (30, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-            
-            # Timer Bar
-            if self.control_window_active:
-                time_left = max(0, self.control_window_duration - (time.time() - self.control_window_start))
-                bar_w = int((time_left / self.control_window_duration) * w)
-                cv2.rectangle(frame, (0, 55), (bar_w, 60), (0, 255, 0), -1)
-
-        # Feedback Text
-        if feedback and not feedback.startswith("move"):
-            cv2.putText(frame, str(feedback).upper(), (w//2 - 50, h//2), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2)
-
-        # Pose Debug
-        cv2.putText(frame, f"Pose: {pose}", (w - 200, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
-        
-        # Helper Text at Bottom
-        help_text = "☝ Point: ACTIVATE | 🤙/Swipe: Next | ✋ Play | ✊ Stop | ✌️ Mouse"
-        cv2.putText(frame, help_text, (20, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
-
-    def run(self):
-        if not self.start_camera(): return
-        print("\n🚀 Ready. Hold 'Peace' ✌️ to toggle Mouse Mode.")
-        
         try:
             while True:
-                ret, frame = self.cap.read()
-                if not ret: break
-                
-                frame = cv2.flip(frame, 1)
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = self.hands.process(rgb_frame)
-                
-                pose = "none"
-                dynamic_gesture = None
-                feedback = None
-                
-                if results.multi_hand_landmarks:
-                    hand_landmarks = results.multi_hand_landmarks[0]
-                    
-                    # Smooth & Analyze
-                    smoothed_np = self.smoother.update(hand_landmarks.landmark, frame.shape)
-                    extended_fingers = self.get_extended_fingers(smoothed_np)
-                    pose = self.classify_pose(extended_fingers)
-                    
-                    palm_center = smoothed_np[9] 
-                    dynamic_gesture = self.detect_dynamic_gesture(palm_center)
-                    
-                    # Process
-                    feedback = self.process_logic(pose, dynamic_gesture, smoothed_np, frame.shape)
-                    
-                    # Draw
-                    self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
-                    
-                    # Draw Pointer in Mouse Mode
-                    if self.mouse_mode:
-                        idx_tip = smoothed_np[8].astype(int)
-                        cv2.circle(frame, tuple(idx_tip), 10, (0, 255, 255), 2)
+                is_new, frame, frame_id, frame_ts = self.camera.read_latest(last_frame_id)
+                if not is_new or frame is None:
+                    key = cv2.waitKey(2) & 0xFF
+                    if not self._handle_key(key):
+                        break
+                    continue
 
-                self.draw_ui(frame, pose, feedback, [])
-                cv2.imshow('AI Gesture Control Pro', frame)
-                
-                if cv2.waitKey(1) & 0xFF == ord('q'): break
-                    
+                last_frame_id = frame_id
+                work_frame = frame.copy()
+                fh, fw = work_frame.shape[:2]
+                aspect = float(fw) / float(max(1, fh))
+
+                # 1. Long-Range 3-Tier Tracking
+                track_res = self.tracker.process_frame(work_frame, timestamp=frame_ts)
+
+                # 2. Scale-Invariant Biomechanical Gesture & Swipe Evaluation
+                eval_res = self.gesture_engine.update(
+                    track_res.landmarks if track_res.detected else None,
+                    now=frame_ts,
+                    aspect_ratio=aspect,
+                )
+
+                # 3. Continuous 1-Euro Air Mouse / Laser Pointer Cursor
+                self.actions.update_cursor(eval_res.cursor_xy, eval_res.is_pinching)
+
+                # 4. Triggered Command Execution
+                if eval_res.triggered_action:
+                    evt = self.actions.execute(
+                        eval_res.triggered_action,
+                        gesture=eval_res.triggered_gesture or "gesture",
+                    )
+                    if evt is not None:
+                        self.stats["gestures_triggered"] += 1
+                        self.hud.trigger_toast(f"{eval_res.gesture_icon}  {evt['label']}")
+                        print(
+                            f"[{evt['time_str']}] {evt['label']} "
+                            f"({eval_res.gesture_name}, ~{track_res.estimated_distance_m:.1f}m)"
+                        )
+
+                # 5. Telemetry & Fast Sub-ROI HUD Render
+                now_t = time.perf_counter()
+                dt = max(1e-4, now_t - prev_loop_t)
+                prev_loop_t = now_t
+                ema_fps = 0.88 * ema_fps + 0.12 * min(120.0, 1.0 / dt)
+                self.stats["total_frames"] += 1
+
+                display_frame = self.hud.render(work_frame, track_res, eval_res, ema_fps)
+                cv2.imshow(win_name, display_frame)
+
+                key = cv2.waitKey(1) & 0xFF
+                if not self._handle_key(key):
+                    break
+
         except KeyboardInterrupt:
-            pass
+            print("\n👋 Interrupted by user.")
         finally:
-            self.cap.release()
+            self.cleanup()
+        return 0
+
+    def _handle_key(self, key: int) -> bool:
+        if key in (255, 0):
+            return True
+        if key == ord("q") or key == 27:
+            return False
+        if key == ord("r"):
+            self.tracker.reset()
+            self.gesture_engine.reset()
+            self.hud.trigger_toast("Tracker & Calibration Reset")
+        elif key == ord("m"):
+            self.config.compact_hud = not self.config.compact_hud
+            self.config.save()
+        elif key == ord("p"):
+            new_prof = self.config.cycle_profile()
+            self.config.save()
+            self.hud.trigger_toast(
+                f"Profile: {self.config.get_active_profile_data()['name']}"
+            )
+        elif key == ord("c"):
+            modes = ["clutch", "dwell", "instant"]
+            idx = modes.index(self.config.activation_mode)
+            self.config.activation_mode = modes[(idx + 1) % len(modes)]
+            self.gesture_engine.reset()
+            self.config.save()
+            self.hud.trigger_toast(f"Activation: {self.config.activation_mode.upper()}")
+        elif key in (ord("1"), ord("2"), ord("3")):
+            preset_keys = ["ultra_light", "balanced", "max_range"]
+            chosen = preset_keys[key - ord("1")]
+            self.config.performance_preset = chosen
+            preset = self.config.get_preset()
+            if self.camera is not None:
+                self.camera.reconfigure(
+                    preset.capture_width, preset.capture_height, self.config.mirror_camera
+                )
+            self.config.save()
+            self.hud.trigger_toast(f"CPU Preset: {preset.label}")
+        return True
+
+    def cleanup(self) -> None:
+        if self.camera is not None:
+            self.camera.stop()
+        try:
             cv2.destroyAllWindows()
+        except Exception:
+            pass
+        self.tracker.close()
+        elapsed = max(0.1, time.perf_counter() - self.stats["start_time"])
+        print(
+            f"\n📊 Session Summary: {self.stats['total_frames']} frames in {elapsed:.1f}s "
+            f"({self.stats['total_frames']/elapsed:.1f} avg FPS), "
+            f"{self.stats['gestures_triggered']} commands executed."
+        )
+
+
+def run_benchmark(config: SystemConfig, backend_preference: str = "auto") -> int:
+    print("⚡ Running CPU Long-Range Pipeline Benchmark...")
+    tracker = LongRangeHandTracker(config, backend_preference=backend_preference)
+    try:
+        frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+        for _ in range(4):
+            tracker.process_frame(frame)
+        n = 25
+        t0 = time.perf_counter()
+        for _ in range(n):
+            tracker.process_frame(frame)
+        avg_ms = (time.perf_counter() - t0) / n * 1000.0
+        print(f"  Backend          : {tracker._backend_type}")
+        print(f"  Preset           : {config.get_preset().label}")
+        print(f"  Avg Frame Latency: {avg_ms:.2f} ms")
+        print(f"  Throughput Cap   : {1000.0 / max(avg_ms, 0.1):.1f} FPS on CPU")
+        return 0
+    finally:
+        tracker.close()
+
+
+def run_studio_server(
+    config: SystemConfig, host: str = "0.0.0.0", port: int = 8000, open_browser: bool = False
+) -> int:
+    import uvicorn
+    from vision_control.server import create_app
+
+    app = create_app(config=config)
+    url = f"http://localhost:{port}"
+    print(f"🌐 Vision Control Web Studio running at {url} (bound to {host}:{port})")
+    print("   Real-time WebSocket OS Bridge (/ws) active for PowerPoint, Media & Air Mouse.")
+    if open_browser:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+    uvicorn.run(app, host=host, port=port, log_level="info")
+    return 0
+
+
+def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Vision Control v2 — Long-Range CPU Hand Gesture Control"
+    )
+    parser.add_argument(
+        "--studio",
+        action="store_true",
+        help="Launch the modern Web Control Studio & WebSocket OS Bridge server",
+    )
+    parser.add_argument(
+        "--open-browser",
+        action="store_true",
+        help="Automatically open the Web Studio URL in default browser (with --studio)",
+    )
+    parser.add_argument("--host", default="0.0.0.0", help="Server bind host (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8000, help="Server port (default: 8000)")
+    parser.add_argument(
+        "--preset",
+        choices=list(PERFORMANCE_PRESETS.keys()),
+        help="CPU performance & range preset",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=PROFILE_ORDER,
+        help="Active control profile (presentation, media, air_mouse, custom)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["clutch", "dwell", "instant"],
+        help="Gesture activation mode",
+    )
+    parser.add_argument("--camera", type=int, help="Camera device index (default: 0)")
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Start Desktop HUD in compact floating corner PiP mode",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["auto", "tasks", "solutions"],
+        default="auto",
+        help="MediaPipe inference backend (auto selects tasks on MP 1.x+ or solutions_lite on 0.10.x)",
+    )
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="Run a headless CPU inference latency benchmark and exit",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    args = parse_args(argv)
+    config = SystemConfig.load()
+
+    if args.preset:
+        config.performance_preset = args.preset
+    if args.profile:
+        config.active_profile = args.profile
+    if args.mode:
+        config.activation_mode = args.mode
+    if args.camera is not None:
+        config.camera_index = args.camera
+    if args.compact:
+        config.compact_hud = True
+
+    if args.benchmark:
+        return run_benchmark(config, backend_preference=args.backend)
+
+    if args.studio:
+        return run_studio_server(
+            config, host=args.host, port=args.port, open_browser=args.open_browser
+        )
+
+    controller = GesturePresentationController(
+        config=config, backend_preference=args.backend
+    )
+    return controller.run()
+
 
 if __name__ == "__main__":
-    # Default run
-    GesturePresentationController().run()
+    sys.exit(main())
