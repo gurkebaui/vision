@@ -85,3 +85,23 @@ def test_websocket_bidirectional_bridge(tmp_path: Path, monkeypatch):
         evt_msg = ws.receive_json()
         assert evt_msg["type"] == "action_executed"
         assert evt_msg["active_profile"] == "media"
+
+
+def test_controller_instantiation_without_mp_solutions(monkeypatch):
+    """
+    Reproduce the exact user call `GesturePresentationController()` when `mp.solutions`
+    is absent (MediaPipe 0.10.32+ / 1.2.0 on Fedora).
+    """
+    import mediapipe as mp
+    from gesture_presentation_control import GesturePresentationController
+
+    monkeypatch.delattr(mp, "solutions", raising=False)
+    cfg = SystemConfig(os_control_enabled=False, pose_assist_enabled=False)
+    ctrl = GesturePresentationController(
+        config=cfg, camera_index=0, smoothing=0.5, mouse_speed=2.0
+    )
+    try:
+        assert ctrl.tracker._backend_type == "tasks_vision"
+    finally:
+        ctrl.tracker.close()
+

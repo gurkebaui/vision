@@ -114,6 +114,7 @@ GESTURE_CATALOG: Dict[str, Dict[str, str]] = {
     "thumbs_up": {"name": "Thumbs Up", "icon": "👍", "kind": "static"},
     "thumbs_down": {"name": "Thumbs Down", "icon": "👎", "kind": "static"},
     "pinch": {"name": "Thumb-Index Pinch", "icon": "👌", "kind": "static"},
+    "shaka": {"name": "Shaka Sign", "icon": "🤙", "kind": "static"},
     "three_fingers": {"name": "Three Fingers", "icon": "🤟", "kind": "static"},
 }
 
@@ -135,9 +136,10 @@ DEFAULT_PROFILES: Dict[str, Dict[str, Any]] = {
             "thumbs_down": "black_screen",
             "closed_fist": "lock_clutch",
             "pinch": "left_click",
+            "shaka": "next_slide",
             "three_fingers": "cycle_profile",
             "swipe_up": "start_presentation",
-            "swipe_down": "exit_presentation",
+            "swipe_down": "zoom_out",
         },
     },
     "media": {
@@ -159,6 +161,7 @@ DEFAULT_PROFILES: Dict[str, Dict[str, Any]] = {
             "swipe_up": "volume_up",
             "swipe_down": "volume_down",
             "pinch": "play_pause",
+            "shaka": "next_track",
         },
     },
     "air_mouse": {
@@ -180,6 +183,7 @@ DEFAULT_PROFILES: Dict[str, Dict[str, Any]] = {
             "three_fingers": "cycle_profile",
             "open_palm": "none",
             "closed_fist": "lock_clutch",
+            "shaka": "browser_forward",
         },
     },
     "custom": {
@@ -198,6 +202,7 @@ DEFAULT_PROFILES: Dict[str, Dict[str, Any]] = {
             "thumbs_down": "volume_down",
             "closed_fist": "exit_presentation",
             "pinch": "left_click",
+            "shaka": "next_slide",
             "three_fingers": "cycle_profile",
             "swipe_up": "scroll_up",
             "swipe_down": "scroll_down",

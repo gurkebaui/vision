@@ -20,6 +20,7 @@ import webbrowser
 from typing import Optional
 
 import cv2
+import mediapipe as mp
 import numpy as np
 
 from vision_control import __version__
@@ -37,9 +38,29 @@ class GesturePresentationController:
     ScaleInvariantGestureEngine, OSActionController, and ModernHUDRenderer.
     """
 
-    def __init__(self, config: Optional[SystemConfig] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[SystemConfig] = None,
+        *,
+        camera_index: Optional[int] = None,
+        smoothing: Optional[float] = None,
+        mouse_speed: Optional[float] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        backend_preference: str = "auto",
+    ) -> None:
         self.config = config or SystemConfig.load()
-        self.tracker = LongRangeHandTracker(self.config)
+        if camera_index is not None:
+            self.config.camera_index = int(camera_index)
+        if smoothing is not None:
+            self.config.cursor_smoothing_min_cutoff = max(0.3, min(4.0, 2.2 - float(smoothing)))
+        if mouse_speed is not None:
+            self.config.cursor_smoothing_beta = max(0.1, float(mouse_speed) * 0.45)
+        self._override_size = (width, height) if (width and height) else None
+
+        self.tracker = LongRangeHandTracker(
+            self.config, backend_preference=backend_preference
+        )
         self.gesture_engine = ScaleInvariantGestureEngine(self.config)
         self.actions = OSActionController(self.config)
         self.hud = ModernHUDRenderer(self.config)
@@ -53,10 +74,11 @@ class GesturePresentationController:
 
     def start_camera(self) -> bool:
         preset = self.config.get_preset()
+        cap_w, cap_h = self._override_size or (preset.capture_width, preset.capture_height)
         self.camera = ThreadedCamera(
             camera_index=self.config.camera_index,
-            width=preset.capture_width,
-            height=preset.capture_height,
+            width=cap_w,
+            height=cap_h,
             fps=preset.target_fps,
             mirror=self.config.mirror_camera,
         )
@@ -74,8 +96,10 @@ class GesturePresentationController:
         return True
 
     def run(self) -> int:
+        mp_ver = getattr(mp, "__version__", "unknown")
         print(f"🚀 Vision Gesture Control v{__version__}")
         print("=" * 56)
+        print(f"  MP Backend  : {self.tracker._backend_type} (mediapipe {mp_ver})")
         print(f"  Profile     : {self.config.get_active_profile_data()['name']}")
         print(f"  CPU Preset  : {self.config.get_preset().label}")
         print(f"  Activation  : {self.config.activation_mode.upper()}")
@@ -207,9 +231,9 @@ class GesturePresentationController:
         )
 
 
-def run_benchmark(config: SystemConfig) -> int:
+def run_benchmark(config: SystemConfig, backend_preference: str = "auto") -> int:
     print("⚡ Running CPU Long-Range Pipeline Benchmark...")
-    tracker = LongRangeHandTracker(config)
+    tracker = LongRangeHandTracker(config, backend_preference=backend_preference)
     try:
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
         for _ in range(4):
@@ -285,6 +309,12 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help="Start Desktop HUD in compact floating corner PiP mode",
     )
     parser.add_argument(
+        "--backend",
+        choices=["auto", "tasks", "solutions"],
+        default="auto",
+        help="MediaPipe inference backend (auto selects tasks on MP 1.x+ or solutions_lite on 0.10.x)",
+    )
+    parser.add_argument(
         "--benchmark",
         action="store_true",
         help="Run a headless CPU inference latency benchmark and exit",
@@ -308,14 +338,16 @@ def main(argv: Optional[list[str]] = None) -> int:
         config.compact_hud = True
 
     if args.benchmark:
-        return run_benchmark(config)
+        return run_benchmark(config, backend_preference=args.backend)
 
     if args.studio:
         return run_studio_server(
             config, host=args.host, port=args.port, open_browser=args.open_browser
         )
 
-    controller = GesturePresentationController(config=config)
+    controller = GesturePresentationController(
+        config=config, backend_preference=args.backend
+    )
     return controller.run()
 
 

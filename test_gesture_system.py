@@ -53,6 +53,7 @@ def check_long_range_scale_invariance() -> bool:
         "thumbs_up",
         "thumbs_down",
         "pinch",
+        "shaka",
         "three_fingers",
     ]
     distances = [0.5, 1.5, 3.0, 4.8]

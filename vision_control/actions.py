@@ -14,8 +14,11 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 import subprocess
+import sys
 import time
+import types
 from collections import deque
 from dataclasses import dataclass
 from typing import Any, Deque, Dict, List, Optional, Tuple
@@ -45,6 +48,11 @@ class OSActionController:
         self._laser_pointer_active = False
         self._mouse_dragging = False
         self.history: Deque[ActionRecord] = deque(maxlen=40)
+        self._wpctl = shutil.which("wpctl") if self.os_name == "Linux" else None
+        self._pactl = shutil.which("pactl") if self.os_name == "Linux" else None
+        self._playerctl = shutil.which("playerctl") if self.os_name == "Linux" else None
+        self._wtype = shutil.which("wtype") if self.os_name == "Linux" else None
+        self._xdotool = shutil.which("xdotool") if self.os_name == "Linux" else None
         self._probe_gui_backend()
 
     def _probe_gui_backend(self) -> None:
@@ -56,6 +64,14 @@ class OSActionController:
             return
 
         try:
+            # On Fedora / minimal Linux, python3-tkinter is an optional package;
+            # stub mouseinfo if tkinter is absent so pyautogui imports cleanly without it.
+            if "mouseinfo" not in sys.modules:
+                try:
+                    import tkinter  # noqa: F401
+                except Exception:
+                    sys.modules["mouseinfo"] = types.ModuleType("mouseinfo")
+
             import pyautogui  # type: ignore
 
             pyautogui.FAILSAFE = True
@@ -107,6 +123,90 @@ class OSActionController:
             return True
         except Exception:
             return False
+
+    def _linux_volume(self, delta_pct: int = 0, mute_toggle: bool = False) -> bool:
+        """Native PipeWire (wpctl) / PulseAudio (pactl) volume control for Fedora & Ubuntu."""
+        if self.os_name != "Linux":
+            return False
+        try:
+            if self._wpctl:
+                if mute_toggle:
+                    cmd = [self._wpctl, "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]
+                elif delta_pct >= 0:
+                    cmd = [
+                        self._wpctl,
+                        "set-volume",
+                        "-l",
+                        "1.0",
+                        "@DEFAULT_AUDIO_SINK@",
+                        f"{abs(delta_pct)}%+",
+                    ]
+                else:
+                    cmd = [
+                        self._wpctl,
+                        "set-volume",
+                        "@DEFAULT_AUDIO_SINK@",
+                        f"{abs(delta_pct)}%-",
+                    ]
+                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return True
+            if self._pactl:
+                if mute_toggle:
+                    cmd = [self._pactl, "set-sink-mute", "@DEFAULT_SINK@", "toggle"]
+                else:
+                    sign = "+" if delta_pct >= 0 else "-"
+                    cmd = [
+                        self._pactl,
+                        "set-sink-volume",
+                        "@DEFAULT_SINK@",
+                        f"{sign}{abs(delta_pct)}%",
+                    ]
+                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _linux_key_fallback(self, action: str) -> bool:
+        """Wayland (wtype) / X11 (xdotool) CLI fallback when PyAutoGUI lacks X11 access."""
+        if self.os_name != "Linux":
+            return False
+        key_map_wtype = {
+            "next_slide": ["wtype", "-k", "Right"],
+            "prev_slide": ["wtype", "-k", "Left"],
+            "play_pause": ["wtype", "-k", "space"],
+            "start_presentation": ["wtype", "-k", "F5"],
+            "exit_presentation": ["wtype", "-k", "Escape"],
+            "black_screen": ["wtype", "b"],
+            "fullscreen": ["wtype", "f"],
+        }
+        key_map_xdotool = {
+            "next_slide": ["xdotool", "key", "Right"],
+            "prev_slide": ["xdotool", "key", "Left"],
+            "play_pause": ["xdotool", "key", "space"],
+            "start_presentation": ["xdotool", "key", "F5"],
+            "exit_presentation": ["xdotool", "key", "Escape"],
+            "black_screen": ["xdotool", "key", "b"],
+            "fullscreen": ["xdotool", "key", "f"],
+        }
+        try:
+            if self._wtype and action in key_map_wtype:
+                subprocess.Popen(
+                    key_map_wtype[action],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return True
+            if self._xdotool and action in key_map_xdotool:
+                subprocess.Popen(
+                    key_map_xdotool[action],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return True
+        except Exception:
+            pass
+        return False
 
     def update_cursor(
         self, cursor_xy: Optional[Tuple[float, float]], is_pinching: bool
@@ -213,7 +313,7 @@ class OSActionController:
         try:
             # Hardware volume / media shortcuts with OS-native acceleration
             if action == "volume_up":
-                if self._win_vk(0xAF) or self._mac_volume(delta=8):
+                if self._win_vk(0xAF) or self._mac_volume(delta=8) or self._linux_volume(delta_pct=6):
                     return True
                 if pag:
                     pag.press("volumeup")
@@ -221,7 +321,7 @@ class OSActionController:
                 return False
 
             if action == "volume_down":
-                if self._win_vk(0xAE) or self._mac_volume(delta=-8):
+                if self._win_vk(0xAE) or self._mac_volume(delta=-8) or self._linux_volume(delta_pct=-6):
                     return True
                 if pag:
                     pag.press("volumedown")
@@ -229,7 +329,7 @@ class OSActionController:
                 return False
 
             if action == "volume_mute":
-                if self._win_vk(0xAD) or self._mac_volume(mute_toggle=True):
+                if self._win_vk(0xAD) or self._mac_volume(mute_toggle=True) or self._linux_volume(mute_toggle=True):
                     return True
                 if pag:
                     pag.press("volumemute")
@@ -239,6 +339,13 @@ class OSActionController:
             if action == "next_track":
                 if self._win_vk(0xB0):
                     return True
+                if self._playerctl:
+                    subprocess.Popen(
+                        [self._playerctl, "next"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    return True
                 if pag:
                     pag.press("nexttrack")
                     return True
@@ -247,13 +354,20 @@ class OSActionController:
             if action == "prev_track":
                 if self._win_vk(0xB1):
                     return True
+                if self._playerctl:
+                    subprocess.Popen(
+                        [self._playerctl, "previous"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    return True
                 if pag:
                     pag.press("prevtrack")
                     return True
                 return False
 
             if pag is None:
-                return False
+                return self._linux_key_fallback(action)
 
             mod_key = "command" if self.os_name == "Darwin" else "ctrl"
 

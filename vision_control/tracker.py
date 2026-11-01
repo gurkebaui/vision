@@ -40,13 +40,15 @@ from .config import SystemConfig
 from .filters import LandmarkSmoother
 
 MODEL_CACHE_DIR = Path(__file__).resolve().parent.parent / ".cache" / "models"
-HAND_TASK_URL = (
+HAND_TASK_URLS: Tuple[str, ...] = (
     "https://storage.googleapis.com/mediapipe-models/"
-    "hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+    "hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+    "https://raw.githubusercontent.com/tarikurrahmann/Control-pc-using-Hand-Gesture/"
+    "main/hand_landmarker.task",
 )
-POSE_LITE_TASK_URL = (
+POSE_LITE_TASK_URLS: Tuple[str, ...] = (
     "https://storage.googleapis.com/mediapipe-models/"
-    "pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
+    "pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
 )
 
 
@@ -165,19 +167,38 @@ def enhance_low_light_crop(
     return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
 
 
-def _ensure_task_model(filename: str, url: str) -> Optional[Path]:
+def _ensure_task_model(
+    filename: str, urls: Sequence[str], optional: bool = False
+) -> Optional[Path]:
     MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = MODEL_CACHE_DIR / filename
     if path.exists() and path.stat().st_size > 500_000:
         return path
-    try:
+
+    if not optional:
+        print(f"📥 Caching MediaPipe model '{filename}' (one-time download -> .cache/models/)...")
+    timeout_s = 4 if optional else 14
+    for url in urls:
         tmp = path.with_suffix(".downloading")
-        urllib.request.urlretrieve(url, str(tmp))
-        if tmp.stat().st_size > 500_000:
-            tmp.replace(path)
-            return path
-    except Exception:
-        pass
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "VisionControl/2.0"})
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp, open(tmp, "wb") as out:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+            if tmp.exists() and tmp.stat().st_size > 500_000:
+                tmp.replace(path)
+                if not optional:
+                    print(f"✅ Cached '{filename}' ({path.stat().st_size / 1e6:.1f} MB)")
+                return path
+        except Exception:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except Exception:
+                    pass
     return None
 
 
@@ -196,8 +217,13 @@ class LongRangeHandTracker:
         (0.72, 0.36, 0.32),  # Tight right auditorium zoom
     )
 
-    def __init__(self, config: Optional[SystemConfig] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[SystemConfig] = None,
+        backend_preference: str = "auto",
+    ) -> None:
         self.config = config or SystemConfig()
+        self.backend_preference = backend_preference
         self.smoother = LandmarkSmoother(num_landmarks=21, min_cutoff=1.45, beta=1.8)
         self._clahe = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(4, 4))
 
@@ -210,24 +236,34 @@ class LongRangeHandTracker:
         self._frame_counter: int = 0
         self._scout_idx: int = 0
         self._last_pose_wrist_norm: Optional[Tuple[float, float]] = None
+        self._video_ts_ms: int = 0
 
-        # Backend initialization: prefer ultra-fast bundled Solutions Lite when available,
-        # seamlessly fall back to MediaPipe Tasks Vision API (1.x+).
+        # Backend initialization: works seamlessly on BOTH MediaPipe 1.x+ (mp.tasks.vision,
+        # where mp.solutions was removed) AND MediaPipe 0.10.x (mp.solutions Lite).
         self._backend_type: str = "none"
         self._mp_hands_track = None
         self._mp_hands_detect = None
         self._mp_pose = None
         self._tasks_hand = None
+        self._tasks_hand_track = None
         self._tasks_pose = None
         self._init_backends()
 
+    def _next_video_ts_ms(self) -> int:
+        now_ms = int(time.monotonic() * 1000.0)
+        self._video_ts_ms = max(self._video_ts_ms + 1, now_ms)
+        return self._video_ts_ms
+
     def _init_backends(self) -> None:
         preset = self.config.get_preset()
-        if hasattr(mp, "solutions") and hasattr(mp.solutions, "hands"):
+        use_solutions = (
+            self.backend_preference in ("auto", "solutions")
+            and hasattr(mp, "solutions")
+            and hasattr(mp.solutions, "hands")
+        )
+        if use_solutions:
             # MediaPipe 0.10.x path: uses bundled XNNPACK Lite models with zero network needed!
             self._backend_type = "solutions_lite"
-            # Note: static_image_mode=False works smoothly for consecutive temporal crops;
-            # for discontinuous scout jumps we use a separate lightweight detector or reset!
             self._mp_hands_track = mp.solutions.hands.Hands(
                 static_image_mode=False,
                 max_num_hands=1,
@@ -242,7 +278,6 @@ class LongRangeHandTracker:
                 min_detection_confidence=max(0.28, self.config.min_detection_confidence - 0.05),
             )
             try:
-                # Pose complexity=1 is bundled inside the wheel offline
                 self._mp_pose = mp.solutions.pose.Pose(
                     static_image_mode=False,
                     model_complexity=1,
@@ -255,27 +290,45 @@ class LongRangeHandTracker:
                 self._mp_pose = None
             return
 
-        # MediaPipe 1.x+ Tasks Vision path
+        # MediaPipe 0.10.30+ / 1.x+ Tasks Vision path (no mp.solutions required!)
         from mediapipe.tasks import python as mp_python
         from mediapipe.tasks.python import vision
 
         self._backend_type = "tasks_vision"
-        hand_model = _ensure_task_model("hand_landmarker.task", HAND_TASK_URL)
+        hand_model = _ensure_task_model("hand_landmarker.task", HAND_TASK_URLS)
         if hand_model is None:
             raise RuntimeError(
-                "Could not locate or download hand_landmarker.task for MediaPipe Tasks."
+                "Could not download hand_landmarker.task on first run. "
+                "Check internet access once to cache .cache/models/hand_landmarker.task."
             )
-        hand_opts = vision.HandLandmarkerOptions(
+
+        # IMAGE runner for discontinuous scout / acquisition crops
+        detect_opts = vision.HandLandmarkerOptions(
             base_options=mp_python.BaseOptions(model_asset_path=str(hand_model)),
             running_mode=vision.RunningMode.IMAGE,
+            num_hands=1,
+            min_hand_detection_confidence=max(0.28, self.config.min_detection_confidence - 0.05),
+            min_hand_presence_confidence=self.config.min_tracking_confidence,
+            min_tracking_confidence=self.config.min_tracking_confidence,
+        )
+        self._tasks_hand = vision.HandLandmarker.create_from_options(detect_opts)
+
+        # VIDEO runner for continuous Tier-1 ROI tracking (skips palm detector on locked frames!)
+        track_opts = vision.HandLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=str(hand_model)),
+            running_mode=vision.RunningMode.VIDEO,
             num_hands=1,
             min_hand_detection_confidence=self.config.min_detection_confidence,
             min_hand_presence_confidence=self.config.min_tracking_confidence,
             min_tracking_confidence=self.config.min_tracking_confidence,
         )
-        self._tasks_hand = vision.HandLandmarker.create_from_options(hand_opts)
+        self._tasks_hand_track = vision.HandLandmarker.create_from_options(track_opts)
 
-        pose_model = _ensure_task_model("pose_landmarker_lite.task", POSE_LITE_TASK_URL)
+        pose_model = (
+            _ensure_task_model("pose_landmarker_lite.task", POSE_LITE_TASK_URLS, optional=True)
+            if self.config.pose_assist_enabled
+            else None
+        )
         if pose_model is not None:
             try:
                 pose_opts = vision.PoseLandmarkerOptions(
@@ -336,9 +389,12 @@ class LongRangeHandTracker:
                 score = float(cls.score)
             return lms, handedness, score, proc_bgr
 
-        # Tasks Vision API
+        # Tasks Vision API (VIDEO mode on continuous locked crops, IMAGE mode on scout jumps)
         mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        res = self._tasks_hand.detect(mp_img)
+        if is_continuous_track and self._tasks_hand_track is not None:
+            res = self._tasks_hand_track.detect_for_video(mp_img, self._next_video_ts_ms())
+        else:
+            res = self._tasks_hand.detect(mp_img)
         if not res.hand_landmarks:
             return None, "Right", 0.0, proc_bgr
         lms = [(float(p.x), float(p.y), float(p.z)) for p in res.hand_landmarks[0]]
@@ -512,13 +568,10 @@ class LongRangeHandTracker:
         # TIER 2 & 3: Long-Range Acquisition (when unlocked or lost)
         # =====================================================================
         if detected_crop_lms is None:
-            # 2A: Quick downscaled full-frame check for close/medium hands (0.3m–1.5m)
+            # 2A: Quick downscaled square full-frame check for close/medium hands (0.3m–1.5m)
             if (not self.config.smart_zoom_enabled) or (self._frame_counter % 2 == 1):
                 full_roi = ROIBox(0, 0, fw, fh, source="full_frame")
-                # Downscale preserving aspect inside a 320px box for fast close-range check
-                scale = min(1.0, 384.0 / max(1, max(fw, fh)))
-                dw, dh = max(64, int(fw * scale)), max(64, int(fh * scale))
-                small = cv2.resize(frame_bgr, (dw, dh), interpolation=cv2.INTER_AREA)
+                small = cv2.resize(frame_bgr, (256, 256), interpolation=cv2.INTER_AREA)
                 if enable_clahe:
                     small = enhance_low_light_crop(small, self._clahe)
                 rgb_small = np.ascontiguousarray(cv2.cvtColor(small, cv2.COLOR_BGR2RGB))
@@ -689,7 +742,14 @@ class LongRangeHandTracker:
         )
 
     def close(self) -> None:
-        for obj in (self._mp_hands_track, self._mp_hands_detect, self._mp_pose, self._tasks_hand, self._tasks_pose):
+        for obj in (
+            self._mp_hands_track,
+            self._mp_hands_detect,
+            self._mp_pose,
+            self._tasks_hand,
+            self._tasks_hand_track,
+            self._tasks_pose,
+        ):
             if obj is not None and hasattr(obj, "close"):
                 try:
                     obj.close()

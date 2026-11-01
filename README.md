@@ -17,6 +17,8 @@ Control **PowerPoint, Keynote, Google Slides, PDFs, System Media/Volume, and an 
 
 ## ⚡ Quick Start
 
+> **Branch note:** Make sure your local checkout is on `main` (`git fetch origin && git checkout main && git pull`). Older branches such as `unfoalded` used the deprecated `mp.solutions` API removed in MediaPipe `0.10.32+` / `1.x`. Vision Control v2 supports **both** modern `mediapipe 1.x` (`mp.tasks.vision`, Python 3.10–3.14) and `mediapipe 0.10.x` (`mp.solutions`) automatically.
+
 ### 1. Install Dependencies
 ```bash
 python -m venv .venv
@@ -25,8 +27,10 @@ source .venv/bin/activate
 # Windows:
 # .venv\Scripts\activate
 
+pip install -U pip
 pip install -r requirements.txt
 ```
+*(On **Fedora / Linux**, PipeWire `wpctl`, `playerctl`, and Wayland `wtype` / XWayland are detected automatically — `python3-tkinter` is not required.)*
 
 ### 2. Run Native Desktop Long-Range HUD (Webcam → Python → OS)
 ```bash
@@ -71,8 +75,9 @@ Hold **🤟 Three Fingers** (`Index + Middle + Ring`) to cycle profiles hands-fr
 | **👍 Thumbs Up** | Zoom In (`Ctrl++`) | Volume Up | Zoom In |
 | **👎 Thumbs Down** | Blackout Screen (`B`) | Volume Down | Zoom Out |
 | **👌 Pinch (Thumb+Index)** | Click / Draw Laser Ink | Play / Pause | **Left Click / Hold to Drag** |
+| **🤙 Shaka Sign** | Next Slide (`Right`) | Next Track | Browser Forward (`Alt+Right`) |
 | **✊ Closed Fist** | Lock Gesture Window | Mute Audio | Lock Gesture Window |
-| **⬆️ / ⬇️ Swipe Up/Down** | Start (`F5`) / Exit (`Esc`) | Volume Up / Down | Scroll Up / Down |
+| **⬆️ / ⬇️ Swipe Up/Down** | Start (`F5`) / Zoom Out (`Ctrl+-`) | Volume Up / Down | Scroll Up / Down |
 | **🤟 Three Fingers** | Cycle Control Mode | Cycle Control Mode | Cycle Control Mode |
 
 ---

@@ -9,6 +9,7 @@ import math
 import time
 
 import cv2
+import mediapipe as mp
 import numpy as np
 
 from vision_control.config import SystemConfig
@@ -101,3 +102,36 @@ def test_tracker_cpu_latency_and_hud_fast_render():
         assert compact.shape == (236, 420, 3)
     finally:
         tracker.close()
+
+
+def test_tasks_vision_backend_when_mp_solutions_removed(monkeypatch):
+    """
+    Simulate MediaPipe 0.10.32+ / 1.2.0+ on Fedora / Python 3.13+ where `mp.solutions`
+    was completely removed: LongRangeHandTracker must initialize via `mp.tasks.vision`
+    and process frames cleanly with zero AttributeError.
+    """
+    monkeypatch.delattr(mp, "solutions", raising=False)
+    assert not hasattr(mp, "solutions")
+
+    cfg = SystemConfig(performance_preset="balanced", pose_assist_enabled=False)
+    tracker = LongRangeHandTracker(cfg)
+    try:
+        assert tracker._backend_type == "tasks_vision"
+        assert tracker._tasks_hand is not None
+        assert tracker._tasks_hand_track is not None
+
+        frame = np.zeros((540, 960, 3), dtype=np.uint8)
+        for _ in range(4):
+            res = tracker.process_frame(frame)
+            assert res.inference_ms >= 0.0
+
+        # Also exercise continuous Tier-1 VIDEO tracking crop path directly
+        roi = make_square_roi(480, 270, 224, 960, 540)
+        lms, handedness, score, crop = tracker._infer_hand_on_crop(
+            frame, roi, target_size=224, is_continuous_track=True, enable_clahe=True
+        )
+        assert lms is None
+        assert crop.shape == (224, 224, 3)
+    finally:
+        tracker.close()
+

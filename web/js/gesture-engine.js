@@ -21,6 +21,7 @@ export const GESTURE_META = {
   thumbs_up:     { name: 'Thumbs Up',         icon: '👍', kind: 'static' },
   thumbs_down:   { name: 'Thumbs Down',       icon: '👎', kind: 'static' },
   pinch:         { name: 'Thumb-Index Pinch', icon: '👌', kind: 'static' },
+  shaka:         { name: 'Shaka Sign',        icon: '🤙', kind: 'static' },
   three_fingers: { name: 'Three Fingers',     icon: '🤟', kind: 'static' },
 };
 
@@ -196,6 +197,14 @@ export class ScaleInvariantGestureEngine {
           pinchPu,
           palmSize,
         };
+      }
+    }
+
+    if (thumbExt && extMap.pinky && curledMap.index && curledMap.middle && curledMap.ring) {
+      const shakaSpanPu = dist2d(iso[4], iso[20]) / palmSize;
+      if (shakaSpanPu > 0.95) {
+        const conf = Math.min(0.95, 0.80 + (shakaSpanPu - 0.95) * 0.20);
+        return { pose: 'shaka', confidence: conf, extendedFingers, pinchPu, palmSize };
       }
     }
 

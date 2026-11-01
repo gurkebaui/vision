@@ -84,9 +84,10 @@ const FALLBACK_CONFIG = {
         thumbs_down: 'black_screen',
         closed_fist: 'lock_clutch',
         pinch: 'left_click',
+        shaka: 'next_slide',
         three_fingers: 'cycle_profile',
         swipe_up: 'start_presentation',
-        swipe_down: 'exit_presentation',
+        swipe_down: 'zoom_out',
       },
     },
     media: {
@@ -108,6 +109,7 @@ const FALLBACK_CONFIG = {
         swipe_up: 'volume_up',
         swipe_down: 'volume_down',
         pinch: 'play_pause',
+        shaka: 'next_track',
       },
     },
     air_mouse: {
@@ -129,6 +131,7 @@ const FALLBACK_CONFIG = {
         three_fingers: 'cycle_profile',
         open_palm: 'none',
         closed_fist: 'lock_clutch',
+        shaka: 'browser_forward',
       },
     },
     custom: {
@@ -147,6 +150,7 @@ const FALLBACK_CONFIG = {
         thumbs_down: 'volume_down',
         closed_fist: 'exit_presentation',
         pinch: 'left_click',
+        shaka: 'next_slide',
         three_fingers: 'cycle_profile',
         swipe_up: 'scroll_up',
         swipe_down: 'scroll_down',

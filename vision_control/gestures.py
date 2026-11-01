@@ -267,6 +267,19 @@ class ScaleInvariantGestureEngine:
                 conf = min(0.94, 0.75 + vert_ratio * 0.20)
                 return "pointing_down", conf, extended_fingers, pinch_pu, palm_size
 
+        # 5b. Shaka Sign (🤙): thumb + pinky extended outward, index + middle + ring curled
+        if (
+            thumb_ext
+            and ext_map["pinky"]
+            and curled_map["index"]
+            and curled_map["middle"]
+            and curled_map["ring"]
+        ):
+            shaka_span_pu = _dist2d(iso[4], iso[20]) / palm_size
+            if shaka_span_pu > 0.95:
+                conf = min(0.95, 0.80 + (shaka_span_pu - 0.95) * 0.20)
+                return "shaka", conf, extended_fingers, pinch_pu, palm_size
+
         # 6. Thumbs Up (👍) & Thumbs Down (👎)
         palm_cy = (iso[0][1] + iso[5][1] + iso[9][1] + iso[17][1]) * 0.25
         palm_cx = (iso[0][0] + iso[5][0] + iso[9][0] + iso[17][0]) * 0.25

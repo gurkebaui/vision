@@ -45,6 +45,7 @@ def build_synthetic_hand(
         "thumbs_up": [1, 1, 1, 1],
         "thumbs_down": [1, 1, 1, 1],
         "pinch": [0.35, 0, 0, 0],
+        "shaka": [1, 1, 1, 0],
         "three_fingers": [0, 0, 0, 1],
     }
     curls = curl_table[pose]
@@ -123,12 +124,13 @@ def build_synthetic_hand(
         "thumbs_up",
         "thumbs_down",
         "pinch",
+        "shaka",
         "three_fingers",
     ],
 )
 @pytest.mark.parametrize("distance_m", [0.5, 1.2, 2.8, 4.8])
 def test_scale_invariance_across_0_5m_to_4_8m(pose: str, distance_m: float):
-    """All 9 static poses must classify identically at 0.5m, 1.2m, 2.8m, and 4.8m!"""
+    """All 10 static poses must classify identically at 0.5m, 1.2m, 2.8m, and 4.8m!"""
     engine = ScaleInvariantGestureEngine()
     lms = build_synthetic_hand(pose, distance_m=distance_m)
     detected_pose, conf, _, _, _ = engine.classify_static_pose(lms, aspect_ratio=1280 / 720)
